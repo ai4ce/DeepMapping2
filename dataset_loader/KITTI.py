@@ -21,7 +21,7 @@ def find_valid_points(local_point_cloud):
 
 class KITTI(Dataset):
     def __init__(self,root,traj,voxel_size=1,trans_by_pose=None):
-        self.radius = 6371
+        self.radius = 6378137 # earth radius
         self.root = root
         self.traj = traj
         data_folder = os.path.join(root, traj)
@@ -47,11 +47,14 @@ class KITTI(Dataset):
 
         # point_clouds = np.load(os.path.join(data_folder, 'point_cloud.npy')).astype('float32')
         gt_pose = np.load(os.path.join(data_folder, 'gt_pose.npy')).astype('float32')
-        mean_lat = np.mean(gt_pose[:, 0])
-        gt_pose[:, 0] *= self.radius * np.cos(mean_lat)
-        gt_pose[:, 1] *= self.radius
+        gt_pose[:, :2] *= np.pi / 180
+        lat_0 = gt_pose[0, 0]
+        gt_pose[:, 1] *= self.radius * np.cos(lat_0)
+        gt_pose[:, 0] *= self.radius
+        gt_pose[:, 1] -= gt_pose[0, 1]
+        gt_pose[:, 0] -= gt_pose[0, 0]
         self.point_clouds = torch.from_numpy(np.stack(point_clouds)).float() # <B*Nx3>
-        self.gt_pose = gt_pose[:, [0, 1, 5]] # <Nx3>
+        self.gt_pose = gt_pose[:, [1, 0, 5]] # <Nx3>
         self.n_pc = self.point_clouds.shape[0]
         self.n_points = self.point_clouds.shape[1]
         self.valid_points = find_valid_points(self.point_clouds) 

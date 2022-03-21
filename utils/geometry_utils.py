@@ -60,27 +60,21 @@ def transform_to_global_AVD(pose, obs_local):
 def transform_to_global_KITTI(pose, obs_local):
     """
     transform obs local coordinate to global corrdinate frame
-    :param pose: <Bx3> <x,z,theta> y = 0
-    :param obs_local: <BxLx3> 
-    :return obs_global: <BxLx3>
+    :param pose: <Nx3> <x,y,theta> z = 0
+    :param obs_local: <BxNx3> 
+    :return obs_global: <BxNx3>
     """
-    b = obs_local.shape[0]
-    L = obs_local.shape[1]
-
-    c0, theta0 = pose[:, :2],pose[:, 2] # c0 is the loc of sensor in global coord frame c0 <Bx2> <x,z>
-
-    zero = torch.zeros_like(c0[:,:1])
-    c0 = torch.cat((c0,zero),-1) # <Bx3> <x,z,y=0>
-    c0 = c0[:,[0,2,1]] # <Bx3> <x,y=0,z>
-    c0 = c0.unsqueeze(1).expand(-1,L,-1) # <BxLx3>
-    
-    cos = torch.cos(theta0).unsqueeze(-1).unsqueeze(-1)
-    sin = torch.sin(theta0).unsqueeze(-1).unsqueeze(-1)
-    zero = torch.zeros_like(sin)
-    one = torch.ones_like(sin)
-    
-    R_y_transpose = torch.cat((cos,zero,-sin,zero,one,zero,sin,zero,cos),dim=1).reshape(-1,3,3)
-    obs_global = torch.bmm(obs_local,R_y_transpose) + c0
+    # translation
+    assert obs_local.shape[0] == pose.shape[0]
+    theta = -pose[:, [2]]
+    cos_theta = torch.cos(theta)
+    sin_theta = torch.sin(theta)
+    rotation_matrix = torch.cat((cos_theta, -sin_theta, sin_theta, cos_theta), dim=1).reshape(-1, 2, 2)
+    xy = obs_local[:, :, :2]
+    xy_rotated = torch.bmm(xy, rotation_matrix)
+    obs_global = torch.cat((xy_rotated, obs_local[:, :, [2]]), dim=2)
+    obs_global[:, :, 0] = obs_global[:, :, 0] + pose[:, [0]]
+    obs_global[:, :, 1] = obs_global[:, :, 1] + pose[:, [1]]
     return obs_global
 
 

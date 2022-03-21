@@ -1,3 +1,9 @@
+# dataset and results
+*.npy
+*.pcd
+*.pth
+*.json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -127,3 +133,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# helpful functions
+.script/helpfulfunctions/

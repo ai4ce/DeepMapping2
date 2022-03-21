@@ -1,5 +1,6 @@
 import set_path
 import os
+import colorsys
 import argparse
 import functools
 import torch
@@ -10,7 +11,6 @@ import open3d as o3d
 
 from dataset_loader import KITTI
 import utils
-from utils import open3d_utils
 
 def add_y_coord_for_evaluation(pred_pos_DM):
     """
@@ -51,16 +51,26 @@ pred_location = add_y_coord_for_evaluation(pred_location)
 ate,aligned_location = utils.compute_ate(pred_location,gt_location) 
 print('{}, ate: {}'.format(name,ate))
 
+# color in visulization
+colors = []
+color_hue = np.linspace(0, 1, dataset.n_pc)
+for i in range(dataset.n_pc):
+    colors.append(colorsys.hsv_to_rgb(color_hue[i], 0.8, 1))
+color_palette = np.expand_dims(np.array(colors), 1)
+color_palettes = np.repeat(color_palette, repeats=dataset.n_points, axis=1).reshape(-1, 3)
+
 # vis gt
 gt_pose_torch = torch.tensor(gt_pose)
 pcds = dataset.point_clouds
 gt_global = utils.transform_to_global_KITTI(gt_pose_torch, pcds)
 np.save(os.path.join(opt.checkpoint_dir,'obs_global_gt.npy'), gt_global)
 gt_global = utils.load_obs_global_est(os.path.join(opt.checkpoint_dir,'obs_global_gt.npy'))
+gt_global.colors = o3d.Vector3dVector(color_palettes)
 o3d.write_point_cloud(os.path.join(opt.checkpoint_dir, "gt_global.pcd"), gt_global)
 
 # vis results
 global_point_cloud_file = os.path.join(opt.checkpoint_dir,'obs_global_est.npy')
 pcds = utils.load_obs_global_est(global_point_cloud_file)
+pcds.colors = o3d.Vector3dVector(color_palettes)
 # o3d.draw_geometries([pcds])
 o3d.write_point_cloud(os.path.join(opt.checkpoint_dir, "global.pcd"), pcds)

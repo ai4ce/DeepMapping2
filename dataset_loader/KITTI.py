@@ -1,0 +1,71 @@
+import os
+import numpy as np
+import torch
+from torch.utils.data import Dataset
+import open3d as o3d
+
+import utils
+
+def find_valid_points(local_point_cloud):
+    """
+    find valid points in local point cloud
+        invalid points have all zeros local coordinates
+    local_point_cloud: <BxNxk> 
+    valid_points: <BxN> indices  of valid point (0/1)
+    """
+    eps = 1e-6
+    non_zero_coord = torch.abs(local_point_cloud) > eps
+    valid_points = torch.sum(non_zero_coord, dim=-1)
+    valid_points = valid_points > 0
+    return valid_points
+
+class KITTI(Dataset):
+    def __init__(self,root,traj,voxel_size=1,trans_by_pose=None):
+        self.radius = 6371
+        self.root = root
+        self.traj = traj
+        data_folder = os.path.join(root, traj)
+        self._trans_by_pose=trans_by_pose
+
+        files = os.listdir(data_folder)
+        files.remove('gt_pose.npy')
+        point_clouds = []
+        min_points = 0
+        for file in files:
+            xyz = np.load(os.path.join(data_folder, file))
+            pcd = o3d.PointCloud()
+            pcd.points = o3d.Vector3dVector(xyz)
+            pcd = o3d.voxel_down_sample(pcd, voxel_size)
+            pcd = np.asarray(pcd.points)
+            point_clouds.append(pcd)
+            if min_points == 0  or min_points > pcd.shape[0]:
+                # print(pcd.shape)
+                min_points = pcd.shape[0]
+        # print(min_points)
+        for i in range(len(point_clouds)):
+            point_clouds[i] = point_clouds[i][:min_points, :]
+
+        # point_clouds = np.load(os.path.join(data_folder, 'point_cloud.npy')).astype('float32')
+        gt_pose = np.load(os.path.join(data_folder, 'gt_pose.npy')).astype('float32')
+        mean_lat = np.mean(gt_pose[:, 0])
+        gt_pose[:, 0] *= self.radius * np.cos(mean_lat)
+        gt_pose[:, 1] *= self.radius
+        self.point_clouds = torch.from_numpy(np.stack(point_clouds)).float() # <B*Nx3>
+        self.gt_pose = gt_pose[:, [0, 1, 5]] # <Nx3>
+        self.n_pc = self.point_clouds.shape[0]
+        self.n_points = self.point_clouds.shape[1]
+        self.valid_points = find_valid_points(self.point_clouds) 
+        
+    def __getitem__(self,index):
+        pcd = self.point_clouds[index,:,:]  # <Nx3>
+        valid_points = self.valid_points[index,:]  # <N>
+        if self._trans_by_pose is not None:
+            pcd = pcd.unsqueeze(0)  # <1XNx3>
+            pose = self._trans_by_pose[index, :].unsqueeze(0)  # <1x3>
+            pcd = utils.transform_to_global_KITTI(pose, pcd).squeeze(0)
+        else:
+            pose = torch.zeros(1,3)
+        return pcd, valid_points, pose
+
+    def __len__(self):
+        return self.n_pc

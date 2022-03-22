@@ -215,12 +215,12 @@ def icp(src,dst,nv=None,n_iter=100,init_pose=[0,0,0],torlerance=1e-6,metrics='po
     #src = np.matrix(src)
     #dst = np.matrix(dst)
     #Initialise with the initial pose estimation
-    R_init = np.array([[np.cos(init_pose[2]),-np.sin(init_pose[2])],
-                   [np.sin(init_pose[2]), np.cos(init_pose[2])] 
-                      ])
+    R_init = np.array([[np.cos(init_pose[2]),-np.sin(init_pose[2]), 0],
+                    [np.sin(init_pose[2]), np.cos(init_pose[2]), 0],
+                    [0, 0, 1]  ])
     t_init = np.array([[init_pose[0]],
-                   [init_pose[1]]
-                      ])  
+                    [init_pose[1]],
+                    [0]  ])  
     
     #src =  R_init*src.T + t_init
     src = np.matmul(R_init,src.T) + t_init

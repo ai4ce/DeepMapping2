@@ -9,7 +9,7 @@ NAME=KITTI_0001
 # training epochs
 EPOCH=3000
 # batch size
-BS=32
+BS=8
 # loss function
 LOSS=bce_ch
 # number of points sampled from line-of-sight
@@ -25,7 +25,7 @@ NETWORK=deepmapping
 VOXEL=1.5
 
 ### training from scratch
-CUDA_VISIBLE_DEVICES=2 python train_KITTI.py --name $NAME -d $DATA_DIR -t ${TRAJ} -e $EPOCH -b $BS -l $LOSS -n $N -v $VOXEL --log_interval $LOG --network $NETWORK
+# CUDA_VISIBLE_DEVICES=2 python train_KITTI.py --name $NAME -d $DATA_DIR -t ${TRAJ} -e $EPOCH -b $BS -l $LOSS -n $N -v $VOXEL --log_interval $LOG --network $NETWORK
 
 #### warm start
 #### uncomment the following commands to run DeepMapping with a warm start. This requires an initial sensor pose that can be computed using ./script/run_icp.sh

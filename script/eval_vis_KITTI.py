@@ -12,16 +12,17 @@ import open3d as o3d
 from dataset_loader import KITTI
 import utils
 
-def add_y_coord_for_evaluation(pred_pos_DM):
+def add_z_coord_for_evaluation(pred_pos_DM):
     """
     pred_pos_DM (predicted position) estimated from DeepMapping only has x and z coordinate
-    convert this to <x,y=0,z> for evaluation
+    convert this to <x,y,z=0,theta> for evaluation
     """
     n = pred_pos_DM.shape[0]
     x = pred_pos_DM[:,0]
-    y = np.zeros_like(x)
-    z = pred_pos_DM[:,1]
-    return np.stack((x,y,z),axis=-1)
+    y = pred_pos_DM[:,1]
+    z = np.zeros_like(x)
+    theta = pred_pos_DM[:,2]
+    return np.stack((x,y,z,theta),axis=-1)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-c','--checkpoint_dir',type=str,required=True,help='path to results folder')
@@ -36,20 +37,20 @@ traj = train_opt['traj']
 # load ground truth poses
 dataset = KITTI(data_dir,traj,voxel_size)
 gt_pose = dataset.gt_pose
-gt_location = gt_pose[:,:3]
+gt_pose_w_z = add_z_coord_for_evaluation(gt_pose)
 
 # load predicted poses
 pred_file = os.path.join(opt.checkpoint_dir,'pose_est.npy')
 pred_pose = np.load(pred_file)
-pred_location = pred_pose[:,:2]
-pred_location = add_y_coord_for_evaluation(pred_location)
+pred_pose_w_z = add_z_coord_for_evaluation(pred_pose)
 
 # print(pred_location.shape)
 # print(pred_pose)
 # print(gt_pose[:, 3:])
 # compute absolute trajectory error (ATE)
-ate,aligned_location = utils.compute_ate(pred_location,gt_location) 
-print('{}, ate: {}'.format(name,ate))
+trans_ate, rot_ate = utils.compute_ate(pred_pose_w_z,gt_pose_w_z) 
+print('{}, translation ate: {}'.format(name,trans_ate))
+print('{}, rotation ate: {}'.format(name,rot_ate))
 
 # color in visulization
 colors = []

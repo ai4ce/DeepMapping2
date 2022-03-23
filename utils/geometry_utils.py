@@ -271,22 +271,26 @@ def compute_ate(output,target):
     """
     compute absolute trajectory error for avd dataset
     Args:
-        output: <Nx3> predicted trajectory positions, where N is #scans
-        target: <Nx3> ground truth trajectory positions
+        output: <Nx4> predicted trajectory positions, where N is #scans
+        target: <Nx4> ground truth trajectory positions
     Returns:
-        trans_error: <N> absolute trajectory error for each pose
-        output_aligned: <Nx3> aligned position in ground truth coord
+        trans_ate: <N> translation absolute trajectory error for each pose
+        rot_ate: <N> rotation absolute trajectory error for each pose
     """
-    R,t = rigid_transform_kD(output,target)
-    output_aligned = np.matmul(R , output.T) + t
-    output_aligned = output_aligned.T
+    output_location = output[:, :3]
+    target_location = target[:, :3]
+    R,t = rigid_transform_kD(output_location,target_location)
+    location_aligned = np.matmul(R , output_location.T) + t
+    location_aligned = location_aligned.T
+    yaw_aligned = np.arctan2(R[1,0],R[0,0]) + output[:, 3]
 
-    align_error = np.array(output_aligned - target)
-    trans_error = np.sqrt(np.sum(align_error**2,1))
+    trans_error = np.linalg.norm(location_aligned - target_location, axis=1)
+    rot_error = np.linalg.norm(yaw_aligned - target[:, 3])
     
-    ate = np.sqrt(np.dot(trans_error,trans_error) / len(trans_error))
+    trans_ate = np.sqrt(np.mean(trans_error))
+    rot_ate = np.sqrt(np.mean(rot_error))
 
-    return ate,output_aligned
+    return trans_ate, rot_ate
 
 def remove_invalid_pcd(pcd):
     """

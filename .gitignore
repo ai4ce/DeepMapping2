@@ -5,7 +5,7 @@
 *.json
 
 #bash
-*.shs
+*.sh
 *.err
 *.out
 

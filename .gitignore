@@ -4,6 +4,11 @@
 *.pth
 *.json
 
+#bash
+*.sh
+*.err
+*.out
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

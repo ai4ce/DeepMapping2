@@ -14,12 +14,13 @@ import utils
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-c','--checkpoint_dir',type=str,required=True,help='path to results folder')
+parser.add_argument('-v','--voxel_size',type=float,default=1,help='size of downsampling voxel grid')
 opt = parser.parse_args()
 saved_json_file = os.path.join(opt.checkpoint_dir,'opt.json')
 train_opt = utils.load_opt_from_json(saved_json_file)
 name = train_opt['name']
 data_dir = train_opt['data_dir']
-voxel_size = train_opt['voxel_size']
+voxel_size = opt.voxel_size
 traj = train_opt['traj']
 
 # load ground truth poses
@@ -58,7 +59,10 @@ gt_global.colors = o3d.Vector3dVector(color_palettes)
 o3d.write_point_cloud(os.path.join(opt.checkpoint_dir, "gt_global.pcd"), gt_global)
 
 # vis results
+est_pose_torch = torch.tensor(pred_pose)
+est_global = utils.transform_to_global_KITTI(est_pose_torch, pcds)
 global_point_cloud_file = os.path.join(opt.checkpoint_dir,'obs_global_est.npy')
+np.save(global_point_cloud_file, est_global)
 pcds = utils.load_obs_global_est(global_point_cloud_file)
 pcds.colors = o3d.Vector3dVector(color_palettes)
 # o3d.draw_geometries([pcds])

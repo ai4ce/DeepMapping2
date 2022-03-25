@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 import utils
 import loss
 from models import DeepMapping_KITTI
-from dataset_loader import KITTI
+from dataset_loader import KITTI, GroupSampler
 
 torch.backends.cudnn.deterministic = True
 torch.manual_seed(42)
@@ -32,7 +32,7 @@ parser.add_argument('-t','--traj',type=str,default='traj1.txt',help='trajectory 
 parser.add_argument('-m','--model', type=str, default=None,help='pretrained model name')
 parser.add_argument('-i','--init', type=str, default=None,help='init pose')
 parser.add_argument('--log_interval',type=int,default=10,help='logging interval of saving results')
-parser.add_argument('--network', type=str, default='deepmapping', help='the network to use')
+parser.add_argument('-g', '--group', type=bool, default=False, help='whether to group frames')
 
 opt = parser.parse_args()
 
@@ -51,16 +51,17 @@ else:
 
 
 print('loading dataset')
-dataset = KITTI(opt.data_dir,opt.traj,opt.voxel_size, trans_by_pose=init_pose)
+dataset = KITTI(opt.data_dir,opt.traj,opt.voxel_size, trans_by_pose=init_pose, loop_group=opt.group, group_size=opt.batch_size)
 loader = DataLoader(dataset,batch_size=opt.batch_size, shuffle=False)
-
+if opt.group:
+    group_sampler = GroupSampler(dataset.group_matrix)
+    train_loader = DataLoader(dataset,batch_size=opt.batch_size, shuffle=False, sampler=group_sampler)
+else:
+    train_loader = loader
 loss_fn = eval('loss.'+opt.loss)
 
 print('creating model')
-if opt.network == 'deepmapping':
-    model = DeepMapping_KITTI(n_points=dataset.n_points, loss_fn=loss_fn,n_samples=opt.n_samples).to(device)
-else:
-    assert()
+model = DeepMapping_KITTI(n_points=dataset.n_points, loss_fn=loss_fn,n_samples=opt.n_samples).to(device)
     
 optimizer = optim.Adam(model.parameters(),lr=opt.lr)
 
@@ -69,13 +70,13 @@ if opt.model is not None:
 
 
 print('start training')
-best_loss = 2.0
+best_loss = float('inf')
 for epoch in range(opt.n_epochs):
 
     training_loss= 0.0
     model.train()
 
-    for index,(obs_batch, valid_pt, pose_batch) in enumerate(loader):
+    for index,(obs_batch, valid_pt, pose_batch) in enumerate(train_loader):
         obs_batch = obs_batch.to(device)
         valid_pt = valid_pt.to(device)
         pose_batch = pose_batch.to(device)
@@ -87,7 +88,7 @@ for epoch in range(opt.n_epochs):
 
         training_loss += loss.item()
     
-    training_loss_epoch = training_loss/len(loader)
+    training_loss_epoch = training_loss/len(train_loader)
 
     if (epoch+1) % opt.log_interval == 0:
         print('[{}/{}], training loss: {:.4f}'.format(

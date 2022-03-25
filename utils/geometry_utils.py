@@ -4,6 +4,18 @@ import open3d
 from sklearn.neighbors import NearestNeighbors
 import sys
 
+def add_z_coord_for_evaluation(pred_pos_DM):
+    """
+    pred_pos_DM (predicted position) estimated from DeepMapping only has x and z coordinate
+    convert this to <x,y,z=0,theta> for evaluation
+    """
+    n = pred_pos_DM.shape[0]
+    x = pred_pos_DM[:,0]
+    y = pred_pos_DM[:,1]
+    z = np.zeros_like(x)
+    theta = pred_pos_DM[:,2]
+    return np.stack((x,y,z,theta),axis=-1)
+
 def transform_to_global_2D(pose, obs_local):
     """ 
     transform local point cloud to global frame

@@ -30,8 +30,10 @@ class KITTI(Dataset):
 
         files = os.listdir(data_folder)
         files.remove('gt_pose.npy')
-        if self._loop_group:
+        try:
             files.remove('group_matrix.npy')
+        except:
+            pass
         point_clouds = []
         min_points = 0
         for file in files:

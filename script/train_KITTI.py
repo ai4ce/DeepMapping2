@@ -33,6 +33,7 @@ parser.add_argument('-m','--model', type=str, default=None,help='pretrained mode
 parser.add_argument('-i','--init', type=str, default=None,help='init pose')
 parser.add_argument('--log_interval',type=int,default=10,help='logging interval of saving results')
 parser.add_argument('-g', '--group', type=bool, default=False, help='whether to group frames')
+parser.add_argument('--group_size',type=int,default=8,help='group size')
 
 opt = parser.parse_args()
 
@@ -51,7 +52,7 @@ else:
 
 
 print('loading dataset')
-dataset = KITTI(opt.data_dir,opt.traj,opt.voxel_size, trans_by_pose=init_pose, loop_group=opt.group, group_size=opt.batch_size)
+dataset = KITTI(opt.data_dir,opt.traj,opt.voxel_size, trans_by_pose=init_pose, loop_group=opt.group, group_size=opt.group_size)
 loader = DataLoader(dataset,batch_size=opt.batch_size, shuffle=False)
 if opt.group:
     group_sampler = GroupSampler(dataset.group_matrix)

@@ -69,3 +69,10 @@ np.save(os.path.join(checkpoint_dir,'obs_global_icp.npy'), icp_global)
 icp_global = utils.load_obs_global_est(os.path.join(checkpoint_dir,'obs_global_icp.npy'))
 icp_global.colors = o3d.Vector3dVector(color_palettes)
 o3d.write_point_cloud(os.path.join(checkpoint_dir, "icp_global.pcd"), icp_global)
+
+# calculate ate
+gt_pose_w_z = utils.add_z_coord_for_evaluation(dataset.gt_pose)
+pred_pose_w_z = utils.add_z_coord_for_evaluation(pose_est)
+trans_ate, rot_ate = utils.compute_ate(pred_pose_w_z,gt_pose_w_z) 
+print('{}, translation ate: {}'.format(opt.name,trans_ate))
+print('{}, rotation ate: {}'.format(opt.name,rot_ate))

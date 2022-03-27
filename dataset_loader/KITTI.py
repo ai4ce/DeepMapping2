@@ -67,7 +67,8 @@ class KITTI(Dataset):
             self.group_matrix = np.load(os.path.join(data_folder, 'group_matrix.npy')).astype('int')
             if self.group_matrix.shape[1] < kwargs['group_size']:
                 print("Warning: matrix size {} is smaller than group size {}, using {}".format(self.group_matrix.shape[1], kwargs['group_size'], self.group_matrix.shape[1]))
-            self.group_matrix = self.group_matrix[:, :kwargs['group_size']]
+            else:
+                self.group_matrix = self.group_matrix[:, :kwargs['group_size']]
         
     def __getitem__(self,index):
         pcd = self.point_clouds[index,:,:]  # <Nx3>

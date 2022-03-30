@@ -26,13 +26,13 @@ parser.add_argument('-b','--batch_size',type=int,default=16,help='batch_size')
 parser.add_argument('-l','--loss',type=str,default='bce_ch',help='loss function')
 parser.add_argument('-n','--n_samples',type=int,default=35,help='number of sampled unoccupied points along rays')
 parser.add_argument('-v','--voxel_size',type=float,default=1,help='size of downsampling voxel grid')
-parser.add_argument('--lr',type=float,default=0.001,help='learning rate')
+parser.add_argument('--lr',type=float,default=1e-4,help='learning rate')
 parser.add_argument('-d','--data_dir',type=str,default='../data/ActiveVisionDataset/',help='dataset path')
 parser.add_argument('-t','--traj',type=str,default='traj1.txt',help='trajectory file name')
 parser.add_argument('-m','--model', type=str, default=None,help='pretrained model name')
 parser.add_argument('-i','--init', type=str, default=None,help='init pose')
 parser.add_argument('--log_interval',type=int,default=10,help='logging interval of saving results')
-parser.add_argument('-g', '--group', type=bool, default=False, help='whether to group frames')
+parser.add_argument('-g', '--group', type=int, default=0, help='whether to group frames')
 parser.add_argument('--group_size',type=int,default=8,help='group size')
 
 opt = parser.parse_args()
@@ -53,10 +53,10 @@ else:
 
 print('loading dataset')
 dataset = KITTI(opt.data_dir,opt.traj,opt.voxel_size, trans_by_pose=init_pose, loop_group=opt.group, group_size=opt.group_size)
-loader = DataLoader(dataset,batch_size=opt.batch_size, shuffle=False)
+loader = DataLoader(dataset,batch_size=opt.batch_size, shuffle=False, num_workers=24, pin_memory=True)
 if opt.group:
     group_sampler = GroupSampler(dataset.group_matrix)
-    train_loader = DataLoader(dataset,batch_size=opt.batch_size, shuffle=False, sampler=group_sampler)
+    train_loader = DataLoader(dataset,batch_size=opt.batch_size, shuffle=False, sampler=group_sampler, num_workers=24, pin_memory=True)
 else:
     train_loader = loader
 loss_fn = eval('loss.'+opt.loss)
@@ -71,7 +71,7 @@ if opt.model is not None:
 
 
 print('start training')
-best_loss = float('inf')
+best_loss = 60
 for epoch in range(opt.n_epochs):
 
     training_loss= 0.0
@@ -96,6 +96,7 @@ for epoch in range(opt.n_epochs):
             epoch+1,opt.n_epochs,training_loss_epoch))
 
     if training_loss_epoch < best_loss:
+        print("lowest loss:", training_loss_epoch)
         best_loss = training_loss_epoch
         obs_global_est_np = []
         pose_est_np = []

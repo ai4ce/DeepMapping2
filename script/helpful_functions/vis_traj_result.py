@@ -3,8 +3,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm, colors, rc
 
+name = "KITTI_0036_32"
 rc('image', cmap='rainbow_r')
-path = "/mnt/NAS/home/xinhao/deepmapping/DeepMappingPP/results/KITTI/KITTI_0036_group"
+path = "/mnt/NAS/home/xinhao/deepmapping/DeepMappingPP/results/KITTI/" + name
 print("ploting")
 location = np.load(os.path.join(path, "pose_est.npy"))
 t = np.arange(location.shape[0]) / location.shape[0]
@@ -22,4 +23,4 @@ ax.tick_params(axis='both', labelsize=18)
 norm = colors.Normalize(0, location.shape[0])
 cbar = fig.colorbar(cm.ScalarMappable(norm=norm, cmap='rainbow_r'))
 cbar.ax.tick_params(labelsize=18)
-plt.savefig("traj_vis/kitti_0036_group.png", dpi=600)
+plt.savefig("traj_vis/"+name+".png", dpi=600)

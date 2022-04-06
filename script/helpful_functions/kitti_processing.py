@@ -28,7 +28,7 @@ def convert_kitti_txt_to_pose(path):
 
 
 def convert_kitti_sync_to_deepmapping(root):
-    save_path = os.path.join('/mnt/NAS/home/xinhao/deepmapping/DeepMapping_KITTI/data/kitti', root.split('/')[-1])
+    save_path = os.path.join('/mnt/NAS/home/xinhao/deepmapping/DeepMappingPP/data/kitti', root.split('/')[-1])
     os.mkdir(save_path)
     pcd_folder = os.path.join(root, 'velodyne_points/data')
     files = sorted(os.listdir(pcd_folder))
@@ -52,11 +52,8 @@ def convert_kitti_sync_to_deepmapping(root):
     np.save(os.path.join(save_path, 'gt_pose.npy'), np_pose)
     print(np_pose.shape)
 
-root = '/mnt/NAS/data/cc_data/raw_data/2011_09_26'
+root = '/mnt/NAS/home/xinhao/deepmapping/temp'
 files = os.listdir(root)
-files.remove('calib_cam_to_cam.txt')
-files.remove('calib_imu_to_velo.txt')
-files.remove('calib_velo_to_cam.txt')
 for file in files:
     convert_kitti_sync_to_deepmapping(os.path.join(root, file))
     print(file, 'finished')

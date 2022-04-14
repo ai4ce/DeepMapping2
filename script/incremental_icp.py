@@ -24,6 +24,7 @@ if not os.path.exists(checkpoint_dir):
     os.makedirs(checkpoint_dir)
 utils.save_opt(checkpoint_dir,opt)
 
+print('loading dataset')
 dataset = KITTI(opt.data_dir, opt.traj, opt.voxel_size)
 n_pc = len(dataset)
 
@@ -58,7 +59,7 @@ global_pc = utils.transform_to_global_KITTI(pose_est,local_pc)
 
 # visulization
 colors = []
-color_hue = np.linspace(0, 1, dataset.n_pc)
+color_hue = np.linspace(0, 0.8, dataset.n_pc)
 for i in range(dataset.n_pc):
     colors.append(colorsys.hsv_to_rgb(color_hue[i], 0.8, 1))
 color_palette = np.expand_dims(np.array(colors), 1)

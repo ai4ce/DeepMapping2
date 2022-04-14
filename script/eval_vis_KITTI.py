@@ -43,7 +43,7 @@ print('{}, rotation ate: {}'.format(name,rot_ate))
 
 # color in visulization
 colors = []
-color_hue = np.linspace(0, 1, dataset.n_pc)
+color_hue = np.linspace(0, 0.8, dataset.n_pc)
 for i in range(dataset.n_pc):
     colors.append(colorsys.hsv_to_rgb(color_hue[i], 0.8, 1))
 color_palette = np.expand_dims(np.array(colors), 1)

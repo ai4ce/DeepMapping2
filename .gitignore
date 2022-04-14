@@ -3,6 +3,7 @@
 *.pcd
 *.pth
 *.json
+script/helpful_functions/traj_vis
 
 #bash
 *.sh

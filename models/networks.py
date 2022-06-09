@@ -89,28 +89,17 @@ class ObsFeatKITTI(nn.Module):
     def __init__(self, n_points, n_out=1024):
         super(ObsFeatKITTI, self).__init__()
         self.n_out = n_out
-
-        self.conv1 = nn.Sequential(
-            nn.Conv1d(3, 64, 1),
-            nn.BatchNorm1d(64),
-            nn.ReLU()
-        )
-        self.conv2 = nn.Sequential(
-            nn.Conv1d(64, 128, 1),
-            nn.BatchNorm1d(128),
-            nn.ReLU()
-        )
-        self.conv3 = nn.Sequential(
-            nn.Conv1d(128, self.n_out, 1),
-            nn.BatchNorm1d(self.n_out)
-        )
+        self.conv1 = nn.Conv1d(3, 64, 1)
+        self.conv2 = nn.Conv1d(64, 128, 1)
+        self.conv3 = nn.Conv1d(
+            128, self.n_out, 1)
         self.mp = nn.MaxPool1d(n_points)
 
     def forward(self, x):
         assert(x.shape[1] == 3), "the input size must be <Bx3xL> "
 
-        x = self.conv1(x)
-        x = self.conv2(x)
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
         x = self.conv3(x)
         x = self.mp(x)
         x = x.view(-1, self.n_out)  # <Bx1024>

@@ -127,3 +127,5 @@ for epoch in range(opt.n_epochs):
 
             save_name = os.path.join(checkpoint_dir,'pose_est.npy')
             np.save(save_name,pose_est_np)
+
+            utils.plot_global_pose(checkpoint_dir, epoch)

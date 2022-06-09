@@ -2,6 +2,7 @@ import os
 from matplotlib import pyplot as plt
 import torch
 import numpy as np
+from matplotlib import cm, colors, rc
 
 
 def plot_global_point_cloud(point_cloud, pose, valid_points, save_dir, **kwargs):
@@ -44,4 +45,30 @@ def save_global_point_cloud_open3d(point_cloud,pose,save_dir):
     ax.set_ylim(ax.get_ylim()[::-1])
     plt.plot(pose[:, 0], pose[:, 1], color='black')
     plt.savefig(save_name)
+    plt.close()
+
+def plot_global_pose(checkpoint_dir, epoch=None, mode=None):
+    rc('image', cmap='rainbow_r')
+    if mode == "prior":
+        location = np.load(os.path.join(checkpoint_dir, "pose_global_prior.npy"))
+    else:
+        location = np.load(os.path.join(checkpoint_dir, "pose_global.npy"))
+    t = np.arange(location.shape[0]) / location.shape[0]
+    location[:, 0] = location[:, 0] - np.mean(location[:, 0])
+    location[:, 1] = location[:, 1] - np.mean(location[:, 1])
+    u = np.cos(location[:, 2]) * 2
+    v = np.sin(location[:, 2]) * 2
+    fig, ax = plt.subplots()
+    fig.set_size_inches(15, 10)
+    ax.quiver(location[:, 0], location[:, 1], u, v, t, scale=10, scale_units='inches', width=2e-3)
+
+    ax.axis('equal')
+    ax.tick_params(axis='both', labelsize=18)
+    norm = colors.Normalize(0, location.shape[0])
+    cbar = fig.colorbar(cm.ScalarMappable(norm=norm, cmap='rainbow_r'))
+    cbar.ax.tick_params(labelsize=18)
+    if mode == 'prior':
+        plt.savefig(os.path.join(checkpoint_dir, "pose_prior.png"), dpi=600)
+    else:
+        plt.savefig(os.path.join(checkpoint_dir, "pose_"+str(epoch)+".png"), dpi=600)
     plt.close()

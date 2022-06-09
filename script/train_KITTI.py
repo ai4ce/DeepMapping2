@@ -70,7 +70,7 @@ if opt.model is not None:
     utils.load_checkpoint(opt.model,model,optimizer)
 
 if opt.resume:
-    resume_filename = opt.LOG_DIR + "checkpoint.pth.tar"
+    resume_filename = checkpoint_dir + "checkpoint.pth.tar"
     print("Resuming From ", resume_filename)
     checkpoint = torch.load(resume_filename)
     saved_state_dict = checkpoint['state_dict']
@@ -78,7 +78,6 @@ if opt.resume:
     
     model.load_state_dict(saved_state_dict)
     optimizer.load_state_dict(checkpoint['optimizer'])
-
 else:
     starting_epoch = 0
 

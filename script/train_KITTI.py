@@ -17,8 +17,6 @@ from dataset_loader import KITTI, GroupSampler
 torch.backends.cudnn.deterministic = True
 torch.manual_seed(42)
 
-
-
 parser = argparse.ArgumentParser()
 parser.add_argument('--name',type=str,default='test',help='experiment name')
 parser.add_argument('-e','--n_epochs',type=int,default=1000,help='number of epochs')
@@ -28,12 +26,14 @@ parser.add_argument('-n','--n_samples',type=int,default=35,help='number of sampl
 parser.add_argument('-v','--voxel_size',type=float,default=1,help='size of downsampling voxel grid')
 parser.add_argument('--lr',type=float,default=1e-4,help='learning rate')
 parser.add_argument('-d','--data_dir',type=str,default='../data/ActiveVisionDataset/',help='dataset path')
-parser.add_argument('-t','--traj',type=str,default='traj1.txt',help='trajectory file name')
+parser.add_argument('-t','--traj',type=str,default='2011_09_30_drive_0018_sync_full',help='trajectory file folder')
 parser.add_argument('-m','--model', type=str, default=None,help='pretrained model name')
 parser.add_argument('-i','--init', type=str, default=None,help='init pose')
 parser.add_argument('--log_interval',type=int,default=10,help='logging interval of saving results')
 parser.add_argument('-g', '--group', type=int, default=0, help='whether to group frames')
 parser.add_argument('--group_size',type=int,default=8,help='group size')
+parser.add_argument('--resume', action='store_true',
+                    help='If present, restore checkpoint and resume training')
 
 opt = parser.parse_args()
 
@@ -69,11 +69,22 @@ optimizer = optim.Adam(model.parameters(),lr=opt.lr)
 if opt.model is not None:
     utils.load_checkpoint(opt.model,model,optimizer)
 
+if opt.resume:
+    resume_filename = opt.LOG_DIR + "checkpoint.pth.tar"
+    print("Resuming From ", resume_filename)
+    checkpoint = torch.load(resume_filename)
+    saved_state_dict = checkpoint['state_dict']
+    starting_epoch = checkpoint['epoch']
+    
+    model.load_state_dict(saved_state_dict)
+    optimizer.load_state_dict(checkpoint['optimizer'])
+
+else:
+    starting_epoch = 0
 
 print('start training')
 best_loss = 60
-for epoch in range(opt.n_epochs):
-
+for epoch in range(starting_epoch, opt.n_epochs):
     training_loss= 0.0
     model.train()
 
@@ -94,7 +105,7 @@ for epoch in range(opt.n_epochs):
     if (epoch+1) % opt.log_interval == 0:
         print('[{}/{}], training loss: {:.4f}'.format(
             epoch+1,opt.n_epochs,training_loss_epoch))
-
+        torch.save({'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict(), 'epoch': epoch,}, "../results/checkpoint.pth.tar")
     if training_loss_epoch < best_loss:
         print("lowest loss:", training_loss_epoch)
         best_loss = training_loss_epoch
@@ -114,7 +125,7 @@ for epoch in range(opt.n_epochs):
             pose_est_np = np.concatenate(pose_est_np)
             if init_pose is not None:
                pose_est_np = utils.cat_pose_AVD(init_pose_np,pose_est_np)
-
+            
             save_name = os.path.join(checkpoint_dir,'model_best.pth')
             utils.save_checkpoint(save_name,model,optimizer)
 

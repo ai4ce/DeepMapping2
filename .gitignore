@@ -4,6 +4,7 @@
 *.pth
 *.json
 script/helpful_functions/traj_vis
+*.png
 
 #bash
 *.sh

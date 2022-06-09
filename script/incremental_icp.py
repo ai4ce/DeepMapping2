@@ -48,7 +48,7 @@ for idx in range(n_pc-1):
     pose_est[idx+1,:2] = t_cum[:2].T
     pose_est[idx+1,2] = np.arctan2(R_cum[1,0],R_cum[0,0]) 
 
-save_name = os.path.join(checkpoint_dir,'pose_est.npy')
+save_name = os.path.join(checkpoint_dir,'pose_est_icp.npy')
 np.save(save_name,pose_est)
 
 print('saving results')

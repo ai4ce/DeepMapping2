@@ -280,7 +280,6 @@ class DeepMapping_KITTI(nn.Module):
 
     def forward(self, obs_local, valid_points, sensor_pose):
         # obs_local: <BxHxWx3> 
-        
         self.obs_local = deepcopy(obs_local)
         self.valid_points = valid_points
         self.pose_est = self.loc_net(self.obs_local)

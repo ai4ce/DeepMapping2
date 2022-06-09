@@ -58,6 +58,8 @@ global_pc = utils.transform_to_global_KITTI(pose_est,local_pc)
 # utils.plot_global_point_cloud(global_pc,pose_est,valid_id,checkpoint_dir)
 
 # visulization
+utils.plot_global_pose(checkpoint_dir, mode="prior")
+
 colors = []
 color_hue = np.linspace(0, 0.8, dataset.n_pc)
 for i in range(dataset.n_pc):

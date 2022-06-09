@@ -50,7 +50,7 @@ def save_global_point_cloud_open3d(point_cloud,pose,save_dir):
 def plot_global_pose(checkpoint_dir, epoch=None, mode=None):
     rc('image', cmap='rainbow_r')
     if mode == "prior":
-        location = np.load(os.path.join(checkpoint_dir, "pose_global_prior.npy"))
+        location = np.load(os.path.join(checkpoint_dir, "pose_est_icp.npy"))
     else:
         location = np.load(os.path.join(checkpoint_dir, "pose_global.npy"))
     t = np.arange(location.shape[0]) / location.shape[0]
@@ -70,5 +70,7 @@ def plot_global_pose(checkpoint_dir, epoch=None, mode=None):
     if mode == 'prior':
         plt.savefig(os.path.join(checkpoint_dir, "pose_prior.png"), dpi=600)
     else:
-        plt.savefig(os.path.join(checkpoint_dir, "pose_"+str(epoch)+".png"), dpi=600)
+        if not os.path.exists(os.path.join(checkpoint_dir, "vis_traj")):
+            os.mkdir(os.path.join(checkpoint_dir, "vis_traj"))
+        plt.savefig(os.path.join(checkpoint_dir, "vis_traj", "pose_"+str(epoch)+".png"), dpi=600)
     plt.close()

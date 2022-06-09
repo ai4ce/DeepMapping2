@@ -315,3 +315,26 @@ class DeepMapping_KITTI(nn.Module):
         elif self.loss_fn.__name__ == 'bce':
             loss = self.loss_fn(self.occp_prob, self.gt, bce_weight)  # BCE
         return loss
+
+    def init_mnet(self, obs_local, valid_points, sensor_pose):
+        self.obs_local = deepcopy(obs_local)
+        self.valid_points = valid_points
+        self.pose_est = sensor_pose.squeeze(1)
+        self.bs = obs_local.shape[0]
+        self.obs_local = self.obs_local.view(self.bs,-1,3)
+        
+        self.obs_global_est = transform_to_global_KITTI(
+            self.pose_est, self.obs_local)
+
+        if self.training:
+            sensor_center = sensor_pose[:,:,:3]
+            self.unoccupied_local = sample_unoccupied_point(
+                self.obs_local, self.n_samples,sensor_center)
+            self.unoccupied_global = transform_to_global_KITTI(
+                self.pose_est, self.unoccupied_local)
+
+            inputs, self.gt = get_M_net_inputs_labels(
+                self.obs_global_est, self.unoccupied_global)
+            self.occp_prob = self.occup_net(inputs)
+            loss = self.compute_loss()
+            return loss

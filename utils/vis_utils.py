@@ -52,7 +52,7 @@ def plot_global_pose(checkpoint_dir, epoch=None, mode=None):
     if mode == "prior":
         location = np.load(os.path.join(checkpoint_dir, "pose_est_icp.npy"))
     else:
-        location = np.load(os.path.join(checkpoint_dir, "pose_global.npy"))
+        location = np.load(os.path.join(checkpoint_dir, "pose_global_est.npy"))
     t = np.arange(location.shape[0]) / location.shape[0]
     location[:, 0] = location[:, 0] - np.mean(location[:, 0])
     location[:, 1] = location[:, 1] - np.mean(location[:, 1])

@@ -34,6 +34,8 @@ parser.add_argument('-g', '--group', type=int, default=0, help='whether to group
 parser.add_argument('--group_size',type=int,default=8,help='group size')
 parser.add_argument('--resume', action='store_true',
                     help='If present, restore checkpoint and resume training')
+parser.add_argument('--init_mnet', action='store_true',
+                    help='If present, load pretrained Mnet')
 
 opt = parser.parse_args()
 
@@ -81,8 +83,13 @@ if opt.resume:
 else:
     starting_epoch = 0
 
+if opt.init_mnet:
+    print("loading Mnet")
+    state_dict_name = os.path.join(checkpoint_dir, "mnet_best.pth")
+    model.load_state_dict(torch.load(state_dict_name))
+
 print('start training')
-best_loss = 60
+best_loss = 200
 for epoch in range(starting_epoch, opt.n_epochs):
     training_loss= 0.0
     model.train()
@@ -135,7 +142,7 @@ for epoch in range(starting_epoch, opt.n_epochs):
             save_name = os.path.join(checkpoint_dir,'obs_global_est.npy')
             np.save(save_name,obs_global_est_np)
 
-            save_name = os.path.join(checkpoint_dir,'pose_est.npy')
+            save_name = os.path.join(checkpoint_dir,'pose_global_est.npy')
             np.save(save_name,pose_est_np)
 
             utils.plot_global_pose(checkpoint_dir, epoch)

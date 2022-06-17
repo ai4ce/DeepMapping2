@@ -20,7 +20,7 @@ def get_M_net_inputs_labels(occupied_points, unoccupited_points):
     return inputs, gt
 
 
-def sample_unoccupied_point(local_point_cloud, n_samples, center):
+def sample_unoccupied_point(local_point_cloud, n_samples):
     """
     sample unoccupied points along rays in local point cloud
     local_point_cloud: <BxLxk>
@@ -29,7 +29,7 @@ def sample_unoccupied_point(local_point_cloud, n_samples, center):
     """
     bs, L, k = local_point_cloud.shape
     # print(center.shape)
-    center = center.expand(-1,L,-1) # <BxLxk>
+    # center = center.expand(-1,L,-1) # <BxLxk>
     # print(center.shape)
     unoccupied = torch.zeros(bs, L * n_samples, k,
                              device=local_point_cloud.device)
@@ -37,7 +37,8 @@ def sample_unoccupied_point(local_point_cloud, n_samples, center):
         fac = torch.rand(1).item()
         # print(center.shape)
         # print(local_point_cloud.shape)
-        unoccupied[:, (idx - 1) * L:idx * L, :] = center + (local_point_cloud-center) * fac
+        # unoccupied[:, (idx - 1) * L:idx * L, :] = center + (local_point_cloud-center) * fac
+        unoccupied[:, (idx - 1) * L:idx * L, :] = local_point_cloud * fac
     return unoccupied
 
 class DeepMapping2D(nn.Module):
@@ -279,20 +280,21 @@ class DeepMapping_KITTI(nn.Module):
         self.occup_net = MLP(dim)
 
     def forward(self, obs_local, valid_points, sensor_pose):
-        # obs_local: <BxHxWx3> 
-        self.obs_local = deepcopy(obs_local)
+        # obs_local: <BxNx3> 
+        self.obs_local = torch.clone(obs_local)
+        self.obs_initial = transform_to_global_KITTI(
+            sensor_pose, self.obs_local)
         self.valid_points = valid_points
-        self.pose_est = self.loc_net(self.obs_local)
-        self.bs = obs_local.shape[0]
-        self.obs_local = self.obs_local.view(self.bs,-1,3)
-        
+        self.pose_est = self.loc_net(self.obs_local) + sensor_pose
+        # self.bs = obs_local.shape[0]
+        # self.obs_local = self.obs_local.view(self.bs,-1,3)
         self.obs_global_est = transform_to_global_KITTI(
             self.pose_est, self.obs_local)
 
         if self.training:
-            sensor_center = sensor_pose[:,:,:3]
+            # sensor_center = sensor_pose[:,:,:3]
             self.unoccupied_local = sample_unoccupied_point(
-                self.obs_local, self.n_samples,sensor_center)
+                self.obs_local, self.n_samples)
             self.unoccupied_global = transform_to_global_KITTI(
                 self.pose_est, self.unoccupied_local)
 

@@ -3,7 +3,7 @@
 # path to dataset
 DATA_DIR=../data/kitti
 # trajectiory file name
-TRAJ=2011_09_30_drive_0018_sync_full
+TRAJ=2011_09_30_drive_0018_sync_full2
 # experiment name, the results will be saved to ../results/2D/${NAME}
 NAME=KITTI_0018
 # subsample rate

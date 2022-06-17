@@ -47,18 +47,19 @@ utils.save_opt(checkpoint_dir,opt)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 if opt.init is not None:
-   init_pose_np = np.load(opt.init)
-   init_pose = torch.from_numpy(init_pose_np)
+    print("loading initial pose from:", opt.init)
+    init_pose_np = np.load(opt.init)
+    init_pose = torch.from_numpy(init_pose_np)
 else:
-   init_pose = None
+    init_pose = None
 
 
 print('loading dataset')
 dataset = KITTI(opt.data_dir,opt.traj,opt.voxel_size, trans_by_pose=init_pose, loop_group=opt.group, group_size=opt.group_size)
-loader = DataLoader(dataset,batch_size=opt.batch_size, shuffle=False, num_workers=24, pin_memory=True)
+loader = DataLoader(dataset,batch_size=opt.batch_size, shuffle=False, num_workers=8)
 if opt.group:
     group_sampler = GroupSampler(dataset.group_matrix)
-    train_loader = DataLoader(dataset,batch_size=opt.batch_size, shuffle=False, sampler=group_sampler, num_workers=24, pin_memory=True)
+    train_loader = DataLoader(dataset,batch_size=opt.batch_size, shuffle=False, sampler=group_sampler, num_workers=8)
 else:
     train_loader = loader
 loss_fn = eval('loss.'+opt.loss)
@@ -129,8 +130,8 @@ for epoch in range(starting_epoch, opt.n_epochs):
                 pose_est_np.append(model.pose_est.cpu().detach().numpy())
             
             pose_est_np = np.concatenate(pose_est_np)
-            if init_pose is not None:
-               pose_est_np = utils.cat_pose_AVD(init_pose_np,pose_est_np)
+            # if init_pose is not None:
+            #    pose_est_np = utils.cat_pose_AVD(init_pose_np,pose_est_np)
             
             save_name = os.path.join(checkpoint_dir,'model_best.pth')
             utils.save_checkpoint(save_name,model,optimizer)

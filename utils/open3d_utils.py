@@ -23,8 +23,8 @@ def np_to_pcd(xyz):
     convert numpy array to point cloud object in open3d
     """
     xyz = xyz.reshape(-1,3)
-    pcd = o3d.PointCloud()
-    pcd.points = o3d.Vector3dVector(xyz)
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(xyz)
     pcd.paint_uniform_color(np.random.rand(3,))
     return pcd
 
@@ -35,7 +35,7 @@ def load_obs_global_est(file_name):
     """
     obs_global_est = np.load(file_name)
     n_pc = obs_global_est.shape[0]
-    pcds = o3d.PointCloud()
+    pcds = o3d.geometry.PointCloud()
 
     for i in range(n_pc):
         xyz = obs_global_est[i,:,:]

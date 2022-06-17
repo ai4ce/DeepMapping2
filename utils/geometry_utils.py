@@ -1,6 +1,7 @@
 import torch
 import numpy as np
-import open3d
+import open3d as o3d
+from open3d import pipelines
 from sklearn.neighbors import NearestNeighbors
 import sys
 
@@ -279,6 +280,68 @@ def icp(src,dst,nv=None,n_iter=100,init_pose=[0,0,0],torlerance=1e-6,metrics='po
     return src,R,t
 
 
+def icp_o3d(src,dst,nv=None,n_iter=100,init_pose=[0,0,0],torlerance=1e-6,metrics='point',verbose=False):
+    '''
+    Don't support init_pose and only supports 3dof now.
+    Args:
+        src: <Nx3> 3-dim moving points
+        dst: <Nx3> 3-dim fixed points
+        n_iter: a positive integer to specify the maxium nuber of iterations
+        init_pose: [tx,ty,theta] initial transformation
+        torlerance: the tolerance of registration error
+        metrics: 'point' or 'plane'
+        
+    Return:
+        src: transformed src points
+        R: rotation matrix
+        t: translation vector
+        R*src + t
+    '''
+    device = o3d.core.Device("CPU")
+    dtype = o3d.core.float32
+    treg = o3d.t.pipelines.registration
+    src_pcd = o3d.t.geometry.PointCloud(device)
+    src_pcd.point["positions"] = o3d.core.Tensor(src, dtype, device)
+    src_pcd.estimate_normals()
+    dst_pcd = o3d.t.geometry.PointCloud(device)
+    dst_pcd.point["positions"] = o3d.core.Tensor(dst, dtype, device)
+    dst_pcd.estimate_normals()
+
+    voxel_sizes = o3d.utility.DoubleVector([5, 2, 1])
+
+    # List of Convergence-Criteria for Multi-Scale ICP:
+    criteria_list = [
+        treg.ICPConvergenceCriteria(relative_fitness=1e-5,
+                                    relative_rmse=1e-5,
+                                    max_iteration=40),
+        treg.ICPConvergenceCriteria(1e-6, 1e-6, 30),
+        treg.ICPConvergenceCriteria(1e-8, 1e-8, 30)
+    ]
+
+    # `max_correspondence_distances` for Multi-Scale ICP (o3d.utility.DoubleVector):
+    max_correspondence_distances = o3d.utility.DoubleVector([15, 10, 5])
+
+    # Initial alignment or source to target transform.
+    init_source_to_target = o3d.core.Tensor.eye(4, o3d.core.Dtype.Float64)
+
+    # Select the `Estimation Method`, and `Robust Kernel` (for outlier-rejection).
+    estimation = treg.TransformationEstimationPointToPoint()
+
+    # Save iteration wise `fitness`, `inlier_rmse`, etc. to analyse and tune result.
+    save_loss_log = True
+
+    registration_ms_icp = treg.multi_scale_icp(src_pcd, dst_pcd, voxel_sizes,
+                                           criteria_list,
+                                           max_correspondence_distances,
+                                           init_source_to_target, estimation,
+                                           save_loss_log)
+
+    transformation = registration_ms_icp.transformation
+    R = transformation[:3, :3]
+    t = transformation[:3, 3:]
+    return None, R.numpy(), t.numpy()
+
+
 def compute_ate(output,target):
     """
     compute absolute trajectory error for avd dataset
@@ -313,7 +376,7 @@ def remove_invalid_pcd(pcd):
     non_zero_coord = np.abs(pcd_np) > 1e-6 # <Nx3>
     valid_ind = np.sum(non_zero_coord,axis=-1)>0 #<N>
     valid_ind = list(np.nonzero(valid_ind)[0])
-    valid_pcd = open3d.select_down_sample(pcd,valid_ind)
+    valid_pcd = o3d.geometry.select_down_sample(pcd,valid_ind)
     return valid_pcd
 
 def ang2mat(theta):

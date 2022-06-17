@@ -41,9 +41,9 @@ class KITTI(Dataset):
         min_points = 0
         for file in tqdm(files):
             xyz = np.load(os.path.join(data_folder, file))
-            pcd = o3d.PointCloud()
-            pcd.points = o3d.Vector3dVector(xyz)
-            pcd = o3d.voxel_down_sample(pcd, voxel_size)
+            pcd = o3d.geometry.PointCloud()
+            pcd.points = o3d.utility.Vector3dVector(xyz)
+            pcd = pcd.voxel_down_sample(voxel_size)
             pcd = np.asarray(pcd.points)
             point_clouds.append(pcd)
             if min_points == 0  or min_points > pcd.shape[0]:

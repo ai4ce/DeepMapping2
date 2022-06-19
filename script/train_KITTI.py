@@ -36,6 +36,8 @@ parser.add_argument('--pairwise', action='store_true',
                     help='If present, use global consistency loss')
 parser.add_argument('--resume', action='store_true',
                     help='If present, restore checkpoint and resume training')
+parser.add_argument('--alpha', type=float, default=0.1, help='weight for chamfer loss')
+parser.add_argument('--beta', type=float, default=0.1, help='weight for euclidean loss')
 
 opt = parser.parse_args()
 
@@ -65,7 +67,8 @@ loader = DataLoader(dataset, batch_size=opt.batch_size)
 loss_fn = eval('loss.'+opt.loss)
 
 print('creating model')
-model = DeepMapping_KITTI(n_points=dataset.n_points, loss_fn=loss_fn,n_samples=opt.n_samples).to(device)
+model = DeepMapping_KITTI(n_points=dataset.n_points, loss_fn=loss_fn,
+    n_samples=opt.n_samples, alpha=opt.alpha, beta=opt.beta).to(device)
     
 optimizer = optim.Adam(model.parameters(),lr=opt.lr)
 
@@ -73,7 +76,7 @@ if opt.model is not None:
     utils.load_checkpoint(opt.model,model,optimizer)
 
 if opt.resume:
-    resume_filename = checkpoint_dir + "checkpoint.pth.tar"
+    resume_filename = checkpoint_dir + "model_best.pth"
     print("Resuming From ", resume_filename)
     checkpoint = torch.load(resume_filename)
     saved_state_dict = checkpoint['state_dict']

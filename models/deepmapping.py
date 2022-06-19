@@ -271,13 +271,15 @@ class DeepMapping_AVD_clrg(nn.Module):
 
 class DeepMapping_KITTI(nn.Module):
     #def __init__(self, loss_fn, n_samples=35, dim=[3, 256, 256, 256, 256, 256, 256, 1]):
-    def __init__(self, n_points, loss_fn, n_samples=35, dim=[3, 64, 512, 512, 256, 128, 1]):
+    def __init__(self, n_points, loss_fn, n_samples=35, dim=[3, 64, 512, 512, 256, 128, 1], alpha=0.1, beta=0.1):
         super(DeepMapping_KITTI, self).__init__()
         self.n_samples = n_samples
         self.loss_fn = loss_fn
         self.n_points = n_points
         self.loc_net = LocNetRegKITTI(n_points=n_points, out_dims=3) # <x,z,theta> y=0
         self.occup_net = MLP(dim)
+        self.alpha = alpha
+        self.beta = beta
 
     def forward(self, obs_local, valid_points, sensor_pose, pairwise_pose):
         # obs_local: <BxGxNx3> 
@@ -321,12 +323,12 @@ class DeepMapping_KITTI(nn.Module):
 
         if self.loss_fn.__name__ == 'bce_ch':
             loss = self.loss_fn(self.occp_prob, self.gt, self.obs_global_est,
-                                self.valid_points, bce_weight, seq=2, gamma=0.9)  # BCE_CH
+                                self.valid_points, bce_weight, seq=2, gamma=1-self.alpha)  # BCE_CH
         elif self.loss_fn.__name__ == 'bce':
             loss = self.loss_fn(self.occp_prob, self.gt, bce_weight)  # BCE
         elif self.loss_fn.__name__ == 'bce_ch_eu':
             loss = self.loss_fn(self.occp_prob, self.gt, self.obs_global_est, self.relative_centroid, self.centorid,
-                                self.valid_points, bce_weight, seq=2, gamma=0.6)  # BCE_CH
+                                self.valid_points, bce_weight, seq=2, alpha=self.alpha, beta=self.beta)  # BCE_CH
         return loss
 
     # def init_mnet(self, obs_local, valid_points, sensor_pose):

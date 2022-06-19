@@ -16,8 +16,8 @@ def bce_ch(pred, targets, obs_global, valid_obs=None, bce_weight=None, seq=2, ga
     ch_loss = chamfer_loss(obs_global, valid_obs, seq)
     return gamma * bce_loss + (1 - gamma) * ch_loss
 
-def bce_ch_eu(pred, targets, obs_global, src, dst, valid_obs=None, bce_weight=None, seq=2, gamma=0.1):
+def bce_ch_eu(pred, targets, obs_global, src, dst, valid_obs=None, bce_weight=None, seq=2, alpha=0.1, beta=0.1):
     bce_loss = bce(pred, targets, bce_weight)
     ch_loss = chamfer_loss(obs_global, valid_obs, seq)
     eu_loss = euclidean_loss(src, dst)
-    return 0.5 * bce_loss + 0.1 * ch_loss + 0.4 * eu_loss
+    return (1-alpha-beta) * bce_loss + alpha * ch_loss + beta * eu_loss

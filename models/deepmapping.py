@@ -279,20 +279,28 @@ class DeepMapping_KITTI(nn.Module):
         self.loc_net = LocNetRegKITTI(n_points=n_points, out_dims=3) # <x,z,theta> y=0
         self.occup_net = MLP(dim)
 
-    def forward(self, obs_local, valid_points, sensor_pose):
-        # obs_local: <BxNx3> 
-        self.obs_local = torch.clone(obs_local)
+    def forward(self, obs_local, valid_points, sensor_pose, pairwise_pose):
+        # obs_local: <BxGxNx3> 
+        B, G, N = obs_local.shape[:3]
+        self.obs_local = torch.clone(obs_local.reshape(-1, N, 3))
+        sensor_pose = sensor_pose.reshape(-1, 3)
         self.obs_initial = transform_to_global_KITTI(
             sensor_pose, self.obs_local)
-        self.valid_points = valid_points
+        self.valid_points = valid_points.reshape(-1, *valid_points.shape[2:])
         self.pose_est = self.loc_net(self.obs_local) + sensor_pose
         # self.bs = obs_local.shape[0]
-        # self.obs_local = self.obs_local.view(self.bs,-1,3)
+        # self.obs_local = self.obs_local.reshape(self.bs,-1,3)
         self.obs_global_est = transform_to_global_KITTI(
             self.pose_est, self.obs_local)
 
         if self.training:
-            # sensor_center = sensor_pose[:,:,:3]
+            pose_consis = self.pose_est.reshape(B, G, 3)[:, 1:, :] + pairwise_pose
+            pose_consis = pose_consis.reshape(-1, 3)
+            self.centorid = self.obs_global_est.reshape(B, G, N, 3)[:, :1, :, :].expand(-1, G-1, -1, -1)
+            self.centorid = self.centorid.reshape(-1, N, 3)
+            self.relative_centroid = transform_to_global_KITTI(
+                pose_consis, self.obs_local.reshape(B, G, N, 3)[:, 1:, :, :].reshape(-1, N, 3)
+            )
             self.unoccupied_local = sample_unoccupied_point(
                 self.obs_local, self.n_samples)
             self.unoccupied_global = transform_to_global_KITTI(
@@ -316,27 +324,30 @@ class DeepMapping_KITTI(nn.Module):
                                 self.valid_points, bce_weight, seq=2, gamma=0.9)  # BCE_CH
         elif self.loss_fn.__name__ == 'bce':
             loss = self.loss_fn(self.occp_prob, self.gt, bce_weight)  # BCE
+        elif self.loss_fn.__name__ == 'bce_ch_eu':
+            loss = self.loss_fn(self.occp_prob, self.gt, self.obs_global_est, self.relative_centroid, self.centorid,
+                                self.valid_points, bce_weight, seq=2, gamma=0.6)  # BCE_CH
         return loss
 
-    def init_mnet(self, obs_local, valid_points, sensor_pose):
-        self.obs_local = deepcopy(obs_local)
-        self.valid_points = valid_points
-        self.pose_est = sensor_pose.squeeze(1)
-        self.bs = obs_local.shape[0]
-        self.obs_local = self.obs_local.view(self.bs,-1,3)
+    # def init_mnet(self, obs_local, valid_points, sensor_pose):
+    #     self.obs_local = deepcopy(obs_local)
+    #     self.valid_points = valid_points
+    #     self.pose_est = sensor_pose.squeeze(1)
+    #     self.bs = obs_local.shape[0]
+    #     self.obs_local = self.obs_local.view(self.bs,-1,3)
         
-        self.obs_global_est = transform_to_global_KITTI(
-            self.pose_est, self.obs_local)
+    #     self.obs_global_est = transform_to_global_KITTI(
+    #         self.pose_est, self.obs_local)
 
-        if self.training:
-            sensor_center = sensor_pose[:,:,:3]
-            self.unoccupied_local = sample_unoccupied_point(
-                self.obs_local, self.n_samples,sensor_center)
-            self.unoccupied_global = transform_to_global_KITTI(
-                self.pose_est, self.unoccupied_local)
+    #     if self.training:
+    #         sensor_center = sensor_pose[:,:,:3]
+    #         self.unoccupied_local = sample_unoccupied_point(
+    #             self.obs_local, self.n_samples,sensor_center)
+    #         self.unoccupied_global = transform_to_global_KITTI(
+    #             self.pose_est, self.unoccupied_local)
 
-            inputs, self.gt = get_M_net_inputs_labels(
-                self.obs_global_est, self.unoccupied_global)
-            self.occp_prob = self.occup_net(inputs)
-            loss = self.compute_loss()
-            return loss
+    #         inputs, self.gt = get_M_net_inputs_labels(
+    #             self.obs_global_est, self.unoccupied_global)
+    #         self.occp_prob = self.occup_net(inputs)
+    #         loss = self.compute_loss()
+    #         return loss

@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 import utils
 import loss
 from models import DeepMapping_KITTI
-from dataset_loader import KITTI, GroupSampler
+from dataset_loader import KITTI
 
 torch.backends.cudnn.deterministic = True
 torch.manual_seed(42)
@@ -32,10 +32,10 @@ parser.add_argument('-i','--init', type=str, default=None,help='init pose')
 parser.add_argument('--log_interval',type=int,default=10,help='logging interval of saving results')
 parser.add_argument('-g', '--group', type=int, default=0, help='whether to group frames')
 parser.add_argument('--group_size',type=int,default=8,help='group size')
+parser.add_argument('--pairwise', action='store_true',
+                    help='If present, use global consistency loss')
 parser.add_argument('--resume', action='store_true',
                     help='If present, restore checkpoint and resume training')
-parser.add_argument('--init_mnet', action='store_true',
-                    help='If present, load pretrained Mnet')
 
 opt = parser.parse_args()
 
@@ -53,15 +53,15 @@ if opt.init is not None:
 else:
     init_pose = None
 
-
 print('loading dataset')
-dataset = KITTI(opt.data_dir,opt.traj,opt.voxel_size, trans_by_pose=init_pose, loop_group=opt.group, group_size=opt.group_size)
-loader = DataLoader(dataset,batch_size=opt.batch_size, shuffle=False, num_workers=8)
-if opt.group:
-    group_sampler = GroupSampler(dataset.group_matrix)
-    train_loader = DataLoader(dataset,batch_size=opt.batch_size, shuffle=False, sampler=group_sampler, num_workers=8)
-else:
-    train_loader = loader
+dataset = KITTI(opt.data_dir,opt.traj,opt.voxel_size, init_pose=init_pose, 
+        group=opt.group, group_size=opt.group_size, pairwise=opt.pairwise)
+loader = DataLoader(dataset, batch_size=opt.batch_size)
+# if opt.group:
+#     group_sampler = GroupSampler(dataset.group_matrix)
+#     train_loader = DataLoader(dataset,batch_size=opt.batch_size, shuffle=False, sampler=group_sampler, num_workers=8)
+# else:
+#     train_loader = loader
 loss_fn = eval('loss.'+opt.loss)
 
 print('creating model')
@@ -84,22 +84,18 @@ if opt.resume:
 else:
     starting_epoch = 0
 
-if opt.init_mnet:
-    print("loading Mnet")
-    state_dict_name = os.path.join(checkpoint_dir, "mnet_best.pth")
-    model.load_state_dict(torch.load(state_dict_name))
-
 print('start training')
 best_loss = 200
 for epoch in range(starting_epoch, opt.n_epochs):
     training_loss= 0.0
     model.train()
 
-    for index,(obs_batch, valid_pt, pose_batch) in enumerate(train_loader):
-        obs_batch = obs_batch.to(device)
+    for index,(obs, valid_pt, init_global_pose, pairwise_pose) in enumerate(loader):
+        obs = obs.to(device)
         valid_pt = valid_pt.to(device)
-        pose_batch = pose_batch.to(device)
-        loss = model(obs_batch, valid_pt, pose_batch)
+        init_global_pose = init_global_pose.to(device)
+        pairwise_pose = pairwise_pose.to(device)
+        loss = model(obs, valid_pt, init_global_pose, pairwise_pose)
 
         optimizer.zero_grad()
         loss.backward()
@@ -107,12 +103,11 @@ for epoch in range(starting_epoch, opt.n_epochs):
 
         training_loss += loss.item()
     
-    training_loss_epoch = training_loss/len(train_loader)
+    training_loss_epoch = training_loss/len(loader)
 
     if (epoch+1) % opt.log_interval == 0:
         print('[{}/{}], training loss: {:.4f}'.format(
             epoch+1,opt.n_epochs,training_loss_epoch))
-        torch.save({'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict(), 'epoch': epoch,}, "../results/checkpoint.pth.tar")
     if training_loss_epoch < best_loss:
         print("lowest loss:", training_loss_epoch)
         best_loss = training_loss_epoch
@@ -120,14 +115,17 @@ for epoch in range(starting_epoch, opt.n_epochs):
         pose_est_np = []
         with torch.no_grad():
             model.eval()
-            for index,(obs_batch, valid_pt, pose_batch) in enumerate(loader):
-                obs_batch = obs_batch.to(device)
+            for index,(obs, valid_pt, init_global_pose, pairwise_pose) in enumerate(loader):
+                obs = obs.to(device)
                 valid_pt = valid_pt.to(device)
-                pose_batch = pose_batch.to(device)
-                model(obs_batch, valid_pt, pose_batch)
+                init_global_pose = init_global_pose.to(device)
+                pairwise_pose = pairwise_pose.to(device)
+                model(obs, valid_pt, init_global_pose, pairwise_pose)
 
-                obs_global_est_np.append(model.obs_global_est.cpu().detach().numpy())
-                pose_est_np.append(model.pose_est.cpu().detach().numpy())
+                obs_global_est = model.obs_global_est.view(obs.shape)[:, 0]
+                pose_est = model.pose_est.view(init_global_pose.shape)[:, 0]
+                obs_global_est_np.append(obs_global_est.cpu().detach().numpy())
+                pose_est_np.append(pose_est.cpu().detach().numpy())
             
             pose_est_np = np.concatenate(pose_est_np)
             # if init_pose is not None:

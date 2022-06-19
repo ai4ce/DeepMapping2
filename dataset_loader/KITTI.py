@@ -19,17 +19,21 @@ def find_valid_points(local_point_cloud):
     valid_points = torch.sum(non_zero_coord, dim=-1)
     valid_points = valid_points > 0
 
-    # valid_points2 = (local_point_cloud[:, :, 2] > -1.5)
-    return valid_points #& valid_points2
+    return valid_points
 
 class KITTI(Dataset):
-    def __init__(self,root,traj,voxel_size=1,trans_by_pose=None,loop_group=False,**kwargs):
+    def __init__(self, root, traj, voxel_size=1, init_pose=None,
+                group=False, group_size=8, pairwise=False, **kwargs):
         self.radius = 6378137 # earth radius
         self.root = root
         self.traj = traj
         data_folder = os.path.join(root, traj)
-        self._trans_by_pose=trans_by_pose
-        self._loop_group = loop_group
+        self.init_pose=init_pose
+        self.group_flag = group
+        self.pairwise_flag = pairwise
+        if self.pairwise_flag and not self.group_flag:
+            print("Pairwise registration needs group information")
+            assert()
 
         files = os.listdir(data_folder)
         files.remove('gt_pose.npy')
@@ -66,33 +70,42 @@ class KITTI(Dataset):
         self.n_pc = self.point_clouds.shape[0]
         self.n_points = self.point_clouds.shape[1]
         self.valid_points = find_valid_points(self.point_clouds)
-        if self._loop_group:
+        if self.group_flag:
             self.group_matrix = np.load(os.path.join(data_folder, 'group_matrix.npy')).astype('int')
-            if self.group_matrix.shape[1] < kwargs['group_size']:
+            if self.group_matrix.shape[1] < group_size:
                 print("Warning: matrix size {} is smaller than group size {}, using {}".format(self.group_matrix.shape[1], kwargs['group_size'], self.group_matrix.shape[1]))
             else:
-                self.group_matrix = self.group_matrix[:, :kwargs['group_size']]
-        
+                self.group_matrix = self.group_matrix[:, :group_size]
+
     def __getitem__(self,index):
-        pcd = self.point_clouds[index,:,:]  # <Nx3>
-        valid_points = self.valid_points[index,:]  # <N>
-        if self._trans_by_pose is not None:
+        indices = self.group_matrix[index]
+        pcd = self.point_clouds[indices,:,:]  # <GxNx3>
+        valid_points = self.valid_points[indices,:]  # <GxN>
+        if self.init_pose is not None:
             # pcd = pcd.unsqueeze(0)  # <1XNx3>
-            pose = self._trans_by_pose[index, :]
+            init_global_pose = self.init_pose[indices, :] # <Gx3>
             # pcd = utils.transform_to_global_KITTI(pose, pcd).squeeze(0)
         else:
-            pose = torch.zeros(1,3)
-        return pcd, valid_points, pose
+            init_global_pose = torch.zeros(self.group_matrix.shape[1],3)
+        pairwise_pose = []
+        if self.pairwise_flag:
+            for i in range(1, indices.shape[0]):
+                pairwise_pose.append(torch.tensor(self.gt_pose[indices[0]] - self.gt_pose[indices[i]]))
+            pairwise_pose = torch.stack(pairwise_pose, dim=0)
+        else:
+            pairwise_pose = torch.zeros(self.group_matrix.shape[1], 3)
+        return pcd, valid_points, init_global_pose, pairwise_pose
 
     def __len__(self):
         return self.n_pc
 
-class GroupSampler(Sampler):
-    def __init__(self, group_matrix):
-        self.group_matrix = group_matrix.reshape(-1)
 
-    def __iter__(self):
-        yield from self.group_matrix
+# class GroupSampler(Sampler):
+#     def __init__(self, group_matrix):
+#         self.group_matrix = group_matrix.reshape(-1)
 
-    def __len__(self):
-        return self.group_matrix.size
+#     def __iter__(self):
+#         yield from self.group_matrix
+
+#     def __len__(self):
+#         return self.group_matrix.size

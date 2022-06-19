@@ -55,7 +55,6 @@ class KITTI(Dataset):
         # print(min_points)
         for i in range(len(point_clouds)):
             point_clouds[i] = np.pad(point_clouds[i], ((0, max_points-point_clouds[i].shape[0]), (0, 0)))
-            print(point_clouds[i].shape)
 
         # point_clouds = np.load(os.path.join(data_folder, 'point_cloud.npy')).astype('float32')
         gt_pose = np.load(os.path.join(data_folder, 'gt_pose.npy')).astype('float32')

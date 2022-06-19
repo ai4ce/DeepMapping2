@@ -42,7 +42,7 @@ class KITTI(Dataset):
         except:
             pass
         point_clouds = []
-        min_points = 0
+        max_points = 0
         for file in tqdm(files):
             xyz = np.load(os.path.join(data_folder, file))
             pcd = o3d.geometry.PointCloud()
@@ -50,12 +50,12 @@ class KITTI(Dataset):
             pcd = pcd.voxel_down_sample(voxel_size)
             pcd = np.asarray(pcd.points)
             point_clouds.append(pcd)
-            if min_points == 0  or min_points > pcd.shape[0]:
-                # print(pcd.shape)
-                min_points = pcd.shape[0]
+            if max_points < pcd.shape[0]:
+                max_points = pcd.shape[0]
         # print(min_points)
         for i in range(len(point_clouds)):
-            point_clouds[i] = point_clouds[i][:min_points, :]
+            point_clouds[i] = np.pad(point_clouds[i], ((0, max_points-point_clouds[i].shape[0]), (0, 0)))
+            print(point_clouds[i].shape)
 
         # point_clouds = np.load(os.path.join(data_folder, 'point_cloud.npy')).astype('float32')
         gt_pose = np.load(os.path.join(data_folder, 'gt_pose.npy')).astype('float32')

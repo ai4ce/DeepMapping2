@@ -300,8 +300,9 @@ class DeepMapping_KITTI(nn.Module):
             pose_consis = pose_consis.reshape(-1, 3)
             self.centorid = self.obs_global_est.reshape(B, G, N, 3)[:, :1, :, :].expand(-1, G-1, -1, -1)
             self.centorid = self.centorid.reshape(-1, N, 3)
+            relative_centroid_local = self.obs_local.reshape(B, G, N, 3)[:, :1, :, :].reshape(-1, N, 3).expand(-1, G-1, -1, -1)
             self.relative_centroid = transform_to_global_KITTI(
-                pose_consis, self.obs_local.reshape(B, G, N, 3)[:, 1:, :, :].reshape(-1, N, 3)
+                pose_consis, relative_centroid_local
             )
             self.unoccupied_local = sample_unoccupied_point(
                 self.obs_local, self.n_samples)

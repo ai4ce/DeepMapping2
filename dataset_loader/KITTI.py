@@ -44,15 +44,20 @@ class KITTI(Dataset):
         point_clouds = []
         max_points = 0
         for file in tqdm(files):
-            xyz = np.load(os.path.join(data_folder, file))
-            pcd = o3d.geometry.PointCloud()
-            pcd.points = o3d.utility.Vector3dVector(xyz)
+            # xyz = np.load(os.path.join(data_folder, file))
+            # pcd = o3d.geometry.PointCloud()
+            # pcd.points = o3d.utility.Vector3dVector(xyz)
+            # _, inliers = pcd.segment_plane(distance_threshold=0.1,
+            #                              ransac_n=10,
+            #                              num_iterations=1000)
+            # pcd.select_by_index(inliers, invert=True)
+            pcd = o3d.io.read_point_cloud(os.path.join(data_folder, file))
             pcd = pcd.voxel_down_sample(voxel_size)
             pcd = np.asarray(pcd.points)
             point_clouds.append(pcd)
             if max_points < pcd.shape[0]:
                 max_points = pcd.shape[0]
-        # print(min_points)
+        # print(max_points)
         for i in range(len(point_clouds)):
             point_clouds[i] = np.pad(point_clouds[i], ((0, max_points-point_clouds[i].shape[0]), (0, 0)))
 
@@ -86,8 +91,8 @@ class KITTI(Dataset):
             # pcd = utils.transform_to_global_KITTI(pose, pcd).squeeze(0)
         else:
             init_global_pose = torch.zeros(self.group_matrix.shape[1],3)
-        pairwise_pose = []
         if self.pairwise_flag:
+            pairwise_pose = []
             for i in range(1, indices.shape[0]):
                 pairwise_pose.append(torch.tensor(self.gt_pose[indices[0]] - self.gt_pose[indices[i]]))
             pairwise_pose = torch.stack(pairwise_pose, dim=0)

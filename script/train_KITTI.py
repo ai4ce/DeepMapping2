@@ -129,14 +129,14 @@ for epoch in range(starting_epoch, opt.n_epochs):
                 obs_global_est_np.append(obs_global_est.cpu().detach().numpy())
                 pose_est_np.append(pose_est.cpu().detach().numpy())
             
-            pose_est_np = np.concatenate(pose_est_np)
+            pose_est_np = np.stack(pose_est_np)
             # if init_pose is not None:
             #    pose_est_np = utils.cat_pose_AVD(init_pose_np,pose_est_np)
             
             save_name = os.path.join(checkpoint_dir,'model_best.pth')
             utils.save_checkpoint(save_name,model,optimizer)
 
-            obs_global_est_np = np.concatenate(obs_global_est_np)
+            obs_global_est_np = np.stack(obs_global_est_np)
             #kwargs = {'e':epoch+1}
             #valid_pt_np = dataset.valid_points.cpu().detach().numpy()
 

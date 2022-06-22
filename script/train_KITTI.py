@@ -20,7 +20,6 @@ torch.manual_seed(42)
 parser = argparse.ArgumentParser()
 parser.add_argument('--name',type=str,default='test',help='experiment name')
 parser.add_argument('-e','--n_epochs',type=int,default=1000,help='number of epochs')
-parser.add_argument('-b','--batch_size',type=int,default=16,help='batch_size')
 parser.add_argument('-l','--loss',type=str,default='bce_ch',help='loss function')
 parser.add_argument('-n','--n_samples',type=int,default=35,help='number of sampled unoccupied points along rays')
 parser.add_argument('-v','--voxel_size',type=float,default=1,help='size of downsampling voxel grid')
@@ -56,9 +55,9 @@ else:
     init_pose = None
 
 print('loading dataset')
-dataset = KITTI(opt.data_dir,opt.traj,opt.voxel_size, init_pose=init_pose, 
+dataset = KITTI(opt.data_dir, opt.traj, opt.voxel_size, init_pose=init_pose, 
         group=opt.group, group_size=opt.group_size, pairwise=opt.pairwise)
-loader = DataLoader(dataset, batch_size=opt.batch_size)
+loader = DataLoader(dataset, batch_size=None)
 # if opt.group:
 #     group_sampler = GroupSampler(dataset.group_matrix)
 #     train_loader = DataLoader(dataset,batch_size=opt.batch_size, shuffle=False, sampler=group_sampler, num_workers=8)
@@ -125,8 +124,8 @@ for epoch in range(starting_epoch, opt.n_epochs):
                 pairwise_pose = pairwise_pose.to(device)
                 model(obs, valid_pt, init_global_pose, pairwise_pose)
 
-                obs_global_est = model.obs_global_est.view(obs.shape)[:, 0]
-                pose_est = model.pose_est.view(init_global_pose.shape)[:, 0]
+                obs_global_est = model.obs_global_est[0]
+                pose_est = model.pose_est[0]
                 obs_global_est_np.append(obs_global_est.cpu().detach().numpy())
                 pose_est_np.append(pose_est.cpu().detach().numpy())
             

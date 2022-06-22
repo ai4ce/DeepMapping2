@@ -283,24 +283,21 @@ class DeepMapping_KITTI(nn.Module):
 
     def forward(self, obs_local, valid_points, sensor_pose, pairwise_pose):
         # obs_local: <BxGxNx3> 
-        B, G, N = obs_local.shape[:3]
-        self.obs_local = torch.clone(obs_local.reshape(-1, N, 3))
-        sensor_pose = sensor_pose.reshape(-1, 3)
+        G = obs_local.shape[0]
+        self.obs_local = obs_local
         self.obs_initial = transform_to_global_KITTI(
             sensor_pose, self.obs_local)
-        self.valid_points = valid_points.reshape(-1, *valid_points.shape[2:])
-        self.pose_est = self.loc_net(self.obs_local) + sensor_pose
+        self.valid_points = valid_points
+        self.pose_est = self.loc_net(self.obs_initial) + sensor_pose
         # self.bs = obs_local.shape[0]
         # self.obs_local = self.obs_local.reshape(self.bs,-1,3)
         self.obs_global_est = transform_to_global_KITTI(
             self.pose_est, self.obs_local)
 
         if self.training:
-            pose_consis = self.pose_est.reshape(B, G, 3)[:, 1:, :] + pairwise_pose
-            pose_consis = pose_consis.reshape(-1, 3)
-            self.centorid = self.obs_global_est.reshape(B, G, N, 3)[:, :1, :, :].expand(-1, G-1, -1, -1)
-            self.centorid = self.centorid.reshape(-1, N, 3)
-            relative_centroid_local = self.obs_local.reshape(B, G, N, 3)[:, :1, :, :].expand(-1, G-1, -1, -1).reshape(-1, N, 3)
+            pose_consis = self.pose_est[1:, :] + pairwise_pose
+            self.centorid = self.obs_global_est[:1, :, :].expand(G-1, -1, -1)
+            relative_centroid_local = self.obs_local[:1, :, :].expand(G-1, -1, -1)
             self.relative_centroid = transform_to_global_KITTI(
                 pose_consis, relative_centroid_local
             )

@@ -29,7 +29,7 @@ gt_pose = dataset.gt_pose
 gt_pose_w_z = utils.add_z_coord_for_evaluation(gt_pose)
 
 # load predicted poses
-pred_file = os.path.join(opt.checkpoint_dir,'pose_est.npy')
+pred_file = os.path.join(opt.checkpoint_dir,'pose_global_est.npy')
 pred_pose = np.load(pred_file)
 pred_pose_w_z = utils.add_z_coord_for_evaluation(pred_pose)
 

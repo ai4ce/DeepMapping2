@@ -82,23 +82,26 @@ class KITTI(Dataset):
                 self.group_matrix = self.group_matrix[:, :group_size]
 
     def __getitem__(self,index):
-        indices = self.group_matrix[index]
-        pcd = self.point_clouds[indices,:,:]  # <GxNx3>
-        valid_points = self.valid_points[indices,:]  # <GxN>
-        if self.init_pose is not None:
-            # pcd = pcd.unsqueeze(0)  # <1XNx3>
-            init_global_pose = self.init_pose[indices, :] # <Gx3>
-            # pcd = utils.transform_to_global_KITTI(pose, pcd).squeeze(0)
+        if self.group_flag:
+            indices = self.group_matrix[index]
+            pcd = self.point_clouds[indices,:,:]  # <GxNx3>
+            valid_points = self.valid_points[indices,:]  # <GxN>
+            if self.init_pose is not None:
+                # pcd = pcd.unsqueeze(0)  # <1XNx3>
+                init_global_pose = self.init_pose[indices, :] # <Gx3>
+                # pcd = utils.transform_to_global_KITTI(pose, pcd).squeeze(0)
+            else:
+                init_global_pose = torch.zeros(self.group_matrix.shape[1],3)
+            if self.pairwise_flag:
+                pairwise_pose = []
+                for i in range(1, indices.shape[0]):
+                    pairwise_pose.append(torch.tensor(self.gt_pose[indices[0]] - self.gt_pose[indices[i]]))
+                pairwise_pose = torch.stack(pairwise_pose, dim=0)
+            else:
+                pairwise_pose = torch.zeros(self.group_matrix.shape[1], 3)
+            return pcd, valid_points, init_global_pose, pairwise_pose
         else:
-            init_global_pose = torch.zeros(self.group_matrix.shape[1],3)
-        if self.pairwise_flag:
-            pairwise_pose = []
-            for i in range(1, indices.shape[0]):
-                pairwise_pose.append(torch.tensor(self.gt_pose[indices[0]] - self.gt_pose[indices[i]]))
-            pairwise_pose = torch.stack(pairwise_pose, dim=0)
-        else:
-            pairwise_pose = torch.zeros(self.group_matrix.shape[1], 3)
-        return pcd, valid_points, init_global_pose, pairwise_pose
+            return self.point_clouds[index]
 
     def __len__(self):
         return self.n_pc

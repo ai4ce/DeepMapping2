@@ -385,6 +385,12 @@ def ang2mat(theta):
     R = np.array([[c,-s],[s,c]])
     return R
 
+def ang2mat_tensor(theta):
+    c = torch.cos(theta)
+    s = torch.sin(theta)
+    R = torch.stack((c, -s, s, c)).reshape(-1, 2, 2)
+    return R
+
 def cat_pose_2D(pose0,pose1):
     """
     pose0, pose1: <Nx3>, numpy array
@@ -425,6 +431,23 @@ def cat_pose_AVD(pose0,pose1):
         t = np.matmul(R1,t0) + t1
         pose_out[i,:2] = t.T
         pose_out[i,2] = theta
+    return pose_out
+
+def cat_pose_KITTI(pose0, pose1):
+    """
+    pose0, pose1: <Nx3>, numpy array
+    each row: <x,y,theta>
+    """
+    assert(pose0.shape==pose1.shape)
+    R0 = ang2mat_tensor(pose0[:, -1])
+    R1 = ang2mat_tensor(pose1[:, -1])
+    t0 = pose0[:, :2]
+    t1 = pose1[:, :2]
+        
+    R = torch.bmm(R1,R0)
+    theta = torch.atan2(R[:, 1, 0], R[:, 0, 1]).unsqueeze(1)
+    t = t0 + t1
+    pose_out = torch.cat((t, theta), dim=1)
     return pose_out
 
 def convert_depth_map_to_pc(depth,fxy,cxy,max_depth=7000,depth_scale=2000):

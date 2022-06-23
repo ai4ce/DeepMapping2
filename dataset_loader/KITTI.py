@@ -74,6 +74,10 @@ class KITTI(Dataset):
         self.n_pc = self.point_clouds.shape[0]
         self.n_points = self.point_clouds.shape[1]
         self.valid_points = find_valid_points(self.point_clouds)
+        # max_dst = utils.transform_to_global_KITTI(torch.tensor(self.gt_pose), self.point_clouds).max().item()
+        # self.point_clouds /= max_dst
+        # self.init_pose[:, :2] = self.init_pose[:, :2] / max_dst
+        # self.gt_pose[:, :2] =  self.gt_pose[:, :2] / max_dst
         if self.group_flag:
             self.group_matrix = np.load(os.path.join(data_folder, 'group_matrix.npy')).astype('int')
             if self.group_matrix.shape[1] < group_size:

@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from .networks import LocNetReg2D, LocNetRegAVD, LocNetRegKITTI, MLP
-from utils import transform_to_global_2D, transform_to_global_AVD, transform_to_global_KITTI
+from utils import transform_to_global_2D, transform_to_global_AVD, transform_to_global_KITTI, cat_pose_KITTI
 
 def get_M_net_inputs_labels(occupied_points, unoccupited_points):
     """
@@ -288,14 +288,16 @@ class DeepMapping_KITTI(nn.Module):
         self.obs_initial = transform_to_global_KITTI(
             sensor_pose, self.obs_local)
         self.valid_points = valid_points
-        self.pose_est = self.loc_net(self.obs_initial) + sensor_pose
+        # self.pose_est = self.loc_net(self.obs_initial) + sensor_pose
+        self.pose_est = cat_pose_KITTI(sensor_pose, self.loc_net(self.obs_initial))
         # self.bs = obs_local.shape[0]
         # self.obs_local = self.obs_local.reshape(self.bs,-1,3)
         self.obs_global_est = transform_to_global_KITTI(
             self.pose_est, self.obs_local)
 
         if self.training:
-            pose_consis = self.pose_est[1:, :] + pairwise_pose
+            # pose_consis = self.pose_est[1:, :] + pairwise_pose
+            pose_consis = cat_pose_KITTI(pairwise_pose, self.pose_est[1:, :])
             self.centorid = self.obs_global_est[:1, :, :].expand(G-1, -1, -1)
             relative_centroid_local = self.obs_local[:1, :, :].expand(G-1, -1, -1)
             self.relative_centroid = transform_to_global_KITTI(

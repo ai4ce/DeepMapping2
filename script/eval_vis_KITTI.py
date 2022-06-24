@@ -26,18 +26,16 @@ traj = train_opt['traj']
 # load ground truth poses
 dataset = KITTI(data_dir,traj,voxel_size)
 gt_pose = dataset.gt_pose
-gt_pose_w_z = utils.add_z_coord_for_evaluation(gt_pose)
 
 # load predicted poses
 pred_file = os.path.join(opt.checkpoint_dir,'pose_global_est.npy')
 pred_pose = np.load(pred_file)
-pred_pose_w_z = utils.add_z_coord_for_evaluation(pred_pose)
 
 # print(pred_location.shape)
 # print(pred_pose)
 # print(gt_pose[:, 3:])
 # compute absolute trajectory error (ATE)
-trans_ate, rot_ate = utils.compute_ate(pred_pose_w_z,gt_pose_w_z) 
+trans_ate, rot_ate = utils.compute_ate(pred_pose, gt_pose) 
 print('{}, translation ate: {}'.format(name,trans_ate))
 print('{}, rotation ate: {}'.format(name,rot_ate))
 

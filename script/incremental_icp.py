@@ -52,29 +52,8 @@ save_name = os.path.join(checkpoint_dir,'pose_est_icp.npy')
 np.save(save_name,pose_est)
 
 print('saving results')
-# pose_est = torch.from_numpy(pose_est)
-# local_pc = dataset[:][0].squeeze(1)
-# global_pc = utils.transform_to_global_KITTI(pose_est,local_pc)
-# utils.plot_global_point_cloud(global_pc,pose_est,valid_id,checkpoint_dir)
-
-# # visulization
-colors = []
-color_hue = np.linspace(0, 0.8, dataset.n_pc)
-for i in range(dataset.n_pc):
-    colors.append(colorsys.hsv_to_rgb(color_hue[i], 0.8, 1))
-color_palette = np.expand_dims(np.array(colors), 1)
-color_palettes = np.repeat(color_palette, repeats=dataset.n_points, axis=1).reshape(-1, 3)
-
-# icp_global = utils.transform_to_global_KITTI(pose_est, dataset.point_clouds)
-# np.save(os.path.join(checkpoint_dir,'pose_global_est.npy'), icp_global)
-# icp_global = utils.load_obs_global_est(os.path.join(checkpoint_dir,'global_prior.npy'))
-# icp_global.colors = o3d.utility.Vector3dVector(color_palettes)
-# o3d.io.write_point_cloud(os.path.join(checkpoint_dir, "icp_global.pcd"), icp_global)
-utils.plot_global_pose(checkpoint_dir, "prior")
-
+utils.plot_global_pose(checkpoint_dir, mode="prior")
 # calculate ate
-# gt_pose_w_z = utils.add_z_coord_for_evaluation(dataset.gt_pose)
-# pred_pose_w_z = utils.add_z_coord_for_evaluation(pose_est)
 print(pose_est.shape)
 print(dataset.gt_pose.shape)
 trans_ate, rot_ate = utils.compute_ate(pose_est, dataset.gt_pose) 

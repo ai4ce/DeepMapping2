@@ -70,7 +70,7 @@ class KITTI(Dataset):
         gt_pose[:, 1] -= gt_pose[0, 1]
         gt_pose[:, 0] -= gt_pose[0, 0]
         self.point_clouds = torch.from_numpy(np.stack(point_clouds)).float() # <BxNx3>
-        self.gt_pose = gt_pose[:, [1, 0, 5]] # <Nx3>
+        self.gt_pose = gt_pose[:, [1, 0, 2, 5]] # <Nx4>
         self.n_pc = self.point_clouds.shape[0]
         self.n_points = self.point_clouds.shape[1]
         self.valid_points = find_valid_points(self.point_clouds)
@@ -88,21 +88,21 @@ class KITTI(Dataset):
     def __getitem__(self,index):
         if self.group_flag:
             indices = self.group_matrix[index]
-            pcd = self.point_clouds[indices,:,:]  # <GxNx3>
+            pcd = self.point_clouds[indices, :, :]  # <GxNx3>
             valid_points = self.valid_points[indices,:]  # <GxN>
             if self.init_pose is not None:
                 # pcd = pcd.unsqueeze(0)  # <1XNx3>
-                init_global_pose = self.init_pose[indices, :] # <Gx3>
+                init_global_pose = self.init_pose[indices, :] # <Gx4>
                 # pcd = utils.transform_to_global_KITTI(pose, pcd).squeeze(0)
             else:
-                init_global_pose = torch.zeros(self.group_matrix.shape[1],3)
+                init_global_pose = torch.zeros(self.group_matrix.shape[1], 4)
             if self.pairwise_flag:
                 pairwise_pose = []
                 for i in range(1, indices.shape[0]):
                     pairwise_pose.append(torch.tensor(self.gt_pose[indices[0]] - self.gt_pose[indices[i]]))
                 pairwise_pose = torch.stack(pairwise_pose, dim=0)
             else:
-                pairwise_pose = torch.zeros(self.group_matrix.shape[1], 3)
+                pairwise_pose = torch.zeros(self.group_matrix.shape[1], 4)
             return pcd, valid_points, init_global_pose, pairwise_pose
         else:
             return self.point_clouds[index]

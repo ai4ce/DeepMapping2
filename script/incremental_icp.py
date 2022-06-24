@@ -31,13 +31,13 @@ print('loading dataset')
 dataset = KITTI(opt.data_dir, opt.traj, opt.voxel_size, group=False, group_size=2, pairwise=False)
 n_pc = len(dataset)
 
-pose_est = np.zeros((n_pc,3),dtype=np.float32)
+pose_est = np.zeros((n_pc, 4),dtype=np.float32)
 print('running icp')
 for idx in tqdm(range(n_pc-1)):
     dst = dataset[idx].numpy()
     src = dataset[idx+1].numpy()
 
-    _,R0,t0 = utils.icp_o3d(src,dst)
+    _, R0, t0 = utils.icp_o3d(src,dst)
     if idx == 0: 
         R_cum = R0
         t_cum = t0
@@ -45,14 +45,14 @@ for idx in tqdm(range(n_pc-1)):
         R_cum = np.matmul(R_cum , R0)
         t_cum = np.matmul(R_cum,t0) + t_cum
     
-    pose_est[idx+1,:2] = t_cum[:2].T
-    pose_est[idx+1,2] = np.arctan2(R_cum[1,0],R_cum[0,0]) 
+    pose_est[idx+1, :3] = t_cum[:3].T
+    pose_est[idx+1, 3] = np.arctan2(R_cum[1,0],R_cum[0,0]) 
 
-save_name = os.path.join(checkpoint_dir,'pose_global_est.npy')
+save_name = os.path.join(checkpoint_dir,'pose_est_icp.npy')
 np.save(save_name,pose_est)
 
 print('saving results')
-pose_est = torch.from_numpy(pose_est)
+# pose_est = torch.from_numpy(pose_est)
 # local_pc = dataset[:][0].squeeze(1)
 # global_pc = utils.transform_to_global_KITTI(pose_est,local_pc)
 # utils.plot_global_point_cloud(global_pc,pose_est,valid_id,checkpoint_dir)
@@ -73,8 +73,10 @@ color_palettes = np.repeat(color_palette, repeats=dataset.n_points, axis=1).resh
 utils.plot_global_pose(checkpoint_dir, "prior")
 
 # calculate ate
-gt_pose_w_z = utils.add_z_coord_for_evaluation(dataset.gt_pose)
-pred_pose_w_z = utils.add_z_coord_for_evaluation(pose_est)
-trans_ate, rot_ate = utils.compute_ate(pred_pose_w_z,gt_pose_w_z) 
+# gt_pose_w_z = utils.add_z_coord_for_evaluation(dataset.gt_pose)
+# pred_pose_w_z = utils.add_z_coord_for_evaluation(pose_est)
+print(pose_est.shape)
+print(dataset.gt_pose.shape)
+trans_ate, rot_ate = utils.compute_ate(pose_est, dataset.gt_pose) 
 print('{}, translation ate: {}'.format(opt.name,trans_ate))
 print('{}, rotation ate: {}'.format(opt.name,rot_ate))

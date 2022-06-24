@@ -3,8 +3,8 @@ import numpy as np
 import os
 from tqdm import tqdm
 
-folder = "/mnt/NAS/home/xinhao/deepmapping/main/data/kitti/2011_09_30_drive_0018_sync_full2"
-target_folder = "/mnt/NAS/home/xinhao/deepmapping/main/data/kitti/2011_09_30_drive_0018_sync_raw"
+folder = "/mnt/NAS/home/xinhao/deepmapping/main_with_z/data/kitti/2011_09_26_drive_0005_sync"
+target_folder = "/mnt/NAS/home/xinhao/deepmapping/main_with_z/data/kitti/2011_09_26_drive_0005_sync_pcd"
 if not os.path.exists(target_folder):
     os.mkdir(target_folder)
 files = os.listdir(folder)

@@ -56,8 +56,8 @@ def plot_global_pose(checkpoint_dir, epoch=None, mode=None):
     t = np.arange(location.shape[0]) / location.shape[0]
     location[:, 0] = location[:, 0] - np.mean(location[:, 0])
     location[:, 1] = location[:, 1] - np.mean(location[:, 1])
-    u = np.cos(location[:, 2]) * 2
-    v = np.sin(location[:, 2]) * 2
+    u = np.cos(location[:, 3]) * 2
+    v = np.sin(location[:, 3]) * 2
     fig, ax = plt.subplots()
     fig.set_size_inches(15, 10)
     ax.quiver(location[:, 0], location[:, 1], u, v, t, scale=10, scale_units='inches', width=2e-3)

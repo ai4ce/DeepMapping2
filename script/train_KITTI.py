@@ -50,6 +50,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if opt.init is not None:
     print("loading initial pose from:", opt.init)
     init_pose_np = np.load(opt.init)
+    init_pose_np = init_pose_np.astype("float32")
     init_pose = torch.from_numpy(init_pose_np)
 else:
     init_pose = None

@@ -18,7 +18,7 @@ def transform_to_global_KITTI(pose, obs_local):
     theta = -pose[:, 3:]
     cos_theta = torch.cos(theta)
     sin_theta = torch.sin(theta)
-    rotation_matrix = torch.cat((cos_theta, -sin_theta, sin_theta, cos_theta), dim=1).reshape(-1, 2, 2)
+    rotation_matrix = torch.cat((cos_theta, sin_theta, -sin_theta, cos_theta), dim=1).reshape(-1, 2, 2)
     xy = obs_local[:, :, :2]
     xy_rotated = torch.bmm(xy, rotation_matrix)
     obs_global = torch.cat((xy_rotated, obs_local[:, :, [2]]), dim=2)

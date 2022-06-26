@@ -166,7 +166,9 @@ def remove_invalid_pcd(pcd):
 def ang2mat_tensor(theta):
     c = torch.cos(theta)
     s = torch.sin(theta)
-    R = torch.stack((c, -s, s, c)).reshape(-1, 2, 2)
+    one = torch.ones_like(theta)
+    zero = torch.zeros_like(theta)
+    R = torch.stack((c, -s, zero, s, c, zero, zero, zero, one)).transpose(0, 1).reshape(-1, 3, 3)
     return R
 
 
@@ -181,8 +183,8 @@ def cat_pose_KITTI(pose0, pose1):
     t0 = pose0[:, :-1]
     t1 = pose1[:, :-1]
         
-    R = torch.bmm(R1,R0)
+    R = torch.bmm(R0, R1)
     theta = torch.atan2(R[:, 1, 0], R[:, 0, 0]).unsqueeze(1)
-    t = t0 + t1
+    t = torch.bmm(R, t0) + t1
     pose_out = torch.cat((t, theta), dim=1)
     return pose_out

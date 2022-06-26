@@ -42,8 +42,8 @@ for idx in tqdm(range(n_pc-1)):
         R_cum = R0
         t_cum = t0
     else:
-        R_cum = np.matmul(R_cum , R0)
-        t_cum = np.matmul(R_cum,t0) + t_cum
+        R_cum = np.matmul(R_cum, R0)
+        t_cum = np.matmul(R_cum, t0) + t_cum
     
     pose_est[idx+1, :3] = t_cum[:3].T
     pose_est[idx+1, 3] = np.arctan2(R_cum[1,0],R_cum[0,0]) 

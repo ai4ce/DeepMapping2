@@ -90,25 +90,25 @@ def icp_o3d(src,dst,nv=None,n_iter=100,init_pose=[0,0,0],torlerance=1e-6,metrics
     dst_pcd.point["positions"] = o3d.core.Tensor(dst, dtype, device)
     dst_pcd.estimate_normals()
 
-    voxel_sizes = o3d.utility.DoubleVector([5, 2, 1])
+    voxel_sizes = o3d.utility.DoubleVector([1, 0.5, 0.2])
 
     # List of Convergence-Criteria for Multi-Scale ICP:
     criteria_list = [
         treg.ICPConvergenceCriteria(relative_fitness=1e-4,
                                     relative_rmse=1e-4,
-                                    max_iteration=10),
-        treg.ICPConvergenceCriteria(1e-5, 1e-5, 20),
-        treg.ICPConvergenceCriteria(1e-6, 1e-6, 30)
+                                    max_iteration=20),
+        treg.ICPConvergenceCriteria(1e-5, 1e-5, 30),
+        treg.ICPConvergenceCriteria(1e-6, 1e-6, 50)
     ]
 
     # `max_correspondence_distances` for Multi-Scale ICP (o3d.utility.DoubleVector):
-    max_correspondence_distances = o3d.utility.DoubleVector([15, 6, 3])
+    max_correspondence_distances = o3d.utility.DoubleVector([3, 1.4, 0.5])
 
     # Initial alignment or source to target transform.
     init_source_to_target = o3d.core.Tensor.eye(4, o3d.core.Dtype.Float64)
 
     # Select the `Estimation Method`, and `Robust Kernel` (for outlier-rejection).
-    estimation = treg.TransformationEstimationPointToPoint()
+    estimation = treg.TransformationEstimationPointToPlane()
 
     # Save iteration wise `fitness`, `inlier_rmse`, etc. to analyse and tune result.
     save_loss_log = True

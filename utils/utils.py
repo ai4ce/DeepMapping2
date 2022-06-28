@@ -13,9 +13,10 @@ def save_opt(working_dir, opt):
         json.dump(opt, f, indent=4, sort_keys=True)
 
 
-def save_checkpoint(save_name, model, optimizer):
+def save_checkpoint(save_name, model, optimizer,epoch):
     state = {'state_dict': model.state_dict(),
-             'optimizer': optimizer.state_dict()}
+             'optimizer': optimizer.state_dict(),
+             "epoch": epoch}
     torch.save(state, save_name)
     print('model saved to {}'.format(save_name))
 

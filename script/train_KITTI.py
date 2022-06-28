@@ -135,7 +135,7 @@ for epoch in range(starting_epoch, opt.n_epochs):
             #    pose_est_np = utils.cat_pose_AVD(init_pose_np,pose_est_np)
             
             save_name = os.path.join(checkpoint_dir,'model_best.pth')
-            utils.save_checkpoint(save_name,model,optimizer)
+            utils.save_checkpoint(save_name,model,optimizer,epoch)
 
             obs_global_est_np = np.stack(obs_global_est_np)
             #kwargs = {'e':epoch+1}

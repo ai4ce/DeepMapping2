@@ -15,7 +15,7 @@ def transform_to_global_KITTI(pose, obs_local):
     """
     # translation
     assert obs_local.shape[0] == pose.shape[0]
-    theta = -pose[:, 3:]
+    theta = pose[:, 3:]
     cos_theta = torch.cos(theta)
     sin_theta = torch.sin(theta)
     rotation_matrix = torch.cat((cos_theta, sin_theta, -sin_theta, cos_theta), dim=1).reshape(-1, 2, 2)

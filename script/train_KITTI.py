@@ -13,6 +13,7 @@ import utils
 import loss
 from models import DeepMapping_KITTI
 from dataset_loader import KITTI
+from tqdm import tqdm
 
 torch.backends.cudnn.deterministic = True
 torch.manual_seed(42)
@@ -55,10 +56,17 @@ if opt.init is not None:
 else:
     init_pose = None
 
+if opt.pairwise:
+    pairwise_path = os.path.join(checkpoint_dir, "pose_pairwise.npy")
+    print("loading pairwise pose from", pairwise_path)
+    pairwise_pose = np.load(pairwise_path)
+else:
+    pairwise_pose = None
+
 print('loading dataset')
 dataset = KITTI(opt.data_dir, opt.traj, opt.voxel_size, init_pose=init_pose, 
-        group=opt.group, group_size=opt.group_size, pairwise=opt.pairwise)
-loader = DataLoader(dataset, batch_size=None)
+        group=opt.group, group_size=opt.group_size, pairwise=opt.pairwise, pairwise_pose=pairwise_pose)
+loader = DataLoader(dataset, batch_size=None, num_workers=4)
 # if opt.group:
 #     group_sampler = GroupSampler(dataset.group_matrix)
 #     train_loader = DataLoader(dataset,batch_size=opt.batch_size, shuffle=False, sampler=group_sampler, num_workers=8)
@@ -76,14 +84,9 @@ if opt.model is not None:
     utils.load_checkpoint(opt.model,model,optimizer)
 
 if opt.resume:
-    resume_filename = checkpoint_dir + "model_best.pth"
+    resume_filename = os.path.join(checkpoint_dir, "model_best.pth")
     print("Resuming From ", resume_filename)
-    checkpoint = torch.load(resume_filename)
-    saved_state_dict = checkpoint['state_dict']
-    starting_epoch = checkpoint['epoch']
-    
-    model.load_state_dict(saved_state_dict)
-    optimizer.load_state_dict(checkpoint['optimizer'])
+    starting_epoch = utils.load_checkpoint(resume_filename, model, optimizer)
 else:
     starting_epoch = 0
 

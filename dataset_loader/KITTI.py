@@ -31,6 +31,8 @@ class KITTI(Dataset):
         self.init_pose=init_pose
         self.group_flag = group
         self.pairwise_flag = pairwise
+        if self.pairwise_flag:
+            self.pairwise_pose = kwargs["pairwise_pose"]
         if self.pairwise_flag and not self.group_flag:
             print("Pairwise registration needs group information")
             assert()
@@ -97,26 +99,13 @@ class KITTI(Dataset):
             else:
                 init_global_pose = torch.zeros(self.group_matrix.shape[1], 4)
             if self.pairwise_flag:
-                pairwise_pose = []
-                for i in range(1, indices.shape[0]):
-                    pairwise_pose.append(torch.tensor(self.gt_pose[indices[0]] - self.gt_pose[indices[i]]))
-                pairwise_pose = torch.stack(pairwise_pose, dim=0)
+                pairwise_pose = self.pairwise_pose[index]
+                pairwise_pose = torch.tensor(pairwise_pose)
             else:
-                pairwise_pose = torch.zeros(self.group_matrix.shape[1], 4)
+                pairwise_pose = torch.zeros(indices.shape[0]-1, 4)
             return pcd, valid_points, init_global_pose, pairwise_pose
         else:
             return self.point_clouds[index]
 
     def __len__(self):
         return self.n_pc
-
-
-# class GroupSampler(Sampler):
-#     def __init__(self, group_matrix):
-#         self.group_matrix = group_matrix.reshape(-1)
-
-#     def __iter__(self):
-#         yield from self.group_matrix
-
-#     def __len__(self):
-#         return self.group_matrix.size

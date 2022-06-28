@@ -13,7 +13,7 @@ def save_opt(working_dir, opt):
         json.dump(opt, f, indent=4, sort_keys=True)
 
 
-def save_checkpoint(save_name, model, optimizer,epoch):
+def save_checkpoint(save_name, model, optimizer, epoch=None):
     state = {'state_dict': model.state_dict(),
              'optimizer': optimizer.state_dict(),
              "epoch": epoch}
@@ -27,6 +27,7 @@ def load_checkpoint(save_name, model, optimizer):
     if optimizer is not None:
         optimizer.load_state_dict(state['optimizer'])
     print('model loaded from {}'.format(save_name))
+    return state["epoch"]
 
 
 def load_opt_from_json(file_name):

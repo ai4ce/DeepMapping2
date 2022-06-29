@@ -90,19 +90,19 @@ def icp_o3d(src,dst,nv=None,n_iter=100,init_pose=[0,0,0],torlerance=1e-6,metrics
     dst_pcd.point["positions"] = o3d.core.Tensor(dst, dtype, device)
     dst_pcd.estimate_normals()
 
-    voxel_sizes = o3d.utility.DoubleVector([1, 0.5, 0.2])
+    voxel_sizes = o3d.utility.DoubleVector([1])
 
     # List of Convergence-Criteria for Multi-Scale ICP:
     criteria_list = [
-        treg.ICPConvergenceCriteria(relative_fitness=1e-4,
-                                    relative_rmse=1e-4,
-                                    max_iteration=20),
-        treg.ICPConvergenceCriteria(1e-5, 1e-5, 30),
-        treg.ICPConvergenceCriteria(1e-6, 1e-6, 50)
+        treg.ICPConvergenceCriteria(relative_fitness=1e-6,
+                                    relative_rmse=1e-6,
+                                    max_iteration=30),
+        # treg.ICPConvergenceCriteria(1e-5, 1e-5, 30),
+        # treg.ICPConvergenceCriteria(1e-6, 1e-6, 50)
     ]
 
     # `max_correspondence_distances` for Multi-Scale ICP (o3d.utility.DoubleVector):
-    max_correspondence_distances = o3d.utility.DoubleVector([3, 1.4, 0.5])
+    max_correspondence_distances = o3d.utility.DoubleVector([3])
 
     # Initial alignment or source to target transform.
     init_source_to_target = o3d.core.Tensor.eye(4, o3d.core.Dtype.Float64)
@@ -141,6 +141,10 @@ def compute_ate(output,target):
     location_aligned = np.matmul(R , output_location.T) + t
     location_aligned = location_aligned.T
     yaw_aligned = np.arctan2(R[1,0],R[0,0]) + output[:, 3]
+    while np.any(yaw_aligned > np.pi):
+        yaw_aligned[yaw_aligned > np.pi] = yaw_aligned[yaw_aligned > np.pi] - 2 * np.pi
+    while np.any(yaw_aligned < -np.pi):
+        yaw_aligned[yaw_aligned < np.pi] = yaw_aligned[yaw_aligned < np.pi] + 2 * np.pi
 
     trans_error = np.linalg.norm(location_aligned - target_location, axis=1)
     rot_error = np.linalg.norm(yaw_aligned - target[:, 3])

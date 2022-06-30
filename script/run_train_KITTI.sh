@@ -3,15 +3,15 @@
 # path to dataset
 DATA_DIR=../data/kitti
 # trajectiory file name
-TRAJ=2011_09_26_drive_0005_sync
+TRAJ=2011_09_30_drive_0018_sync_tfvpr
 # experiment name, the results will be saved to ../results/2D/${NAME}
-NAME=KITTI_0005
+NAME=KITTI_0018_no_gr
 # training epochs
-EPOCH=3000
+EPOCH=200
 # batch size
 BS=1
 # loss function
-LOSS=bce_ch_eu
+LOSS=bce_ch
 # number of points sampled from line-of-sight
 N=10
 # logging interval

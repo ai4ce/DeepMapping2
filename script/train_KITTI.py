@@ -38,6 +38,7 @@ parser.add_argument('--resume', action='store_true',
                     help='If present, restore checkpoint and resume training')
 parser.add_argument('--alpha', type=float, default=0.1, help='weight for chamfer loss')
 parser.add_argument('--beta', type=float, default=0.1, help='weight for euclidean loss')
+parser.add_argument('--optimizer', type=str, default="Adam", help="The optimizer to use")
 
 opt = parser.parse_args()
 
@@ -77,8 +78,14 @@ loss_fn = eval('loss.'+opt.loss)
 print('creating model')
 model = DeepMapping_KITTI(n_points=dataset.n_points, loss_fn=loss_fn,
     n_samples=opt.n_samples, alpha=opt.alpha, beta=opt.beta).to(device)
-    
-optimizer = optim.Adam(model.parameters(),lr=opt.lr)
+
+if opt.optimizer == "Adam":
+    optimizer = optim.Adam(model.parameters(),lr=opt.lr)
+elif opt.optimizer == "SGD":
+    optimizer = optim.SGD(model.parameters(), lr=opt.lr, momentum=0.9)
+else:
+    print("Unsupported optimizer")
+    assert()
 
 if opt.model is not None:
     utils.load_checkpoint(opt.model,model,optimizer)

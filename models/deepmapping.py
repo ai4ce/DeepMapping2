@@ -59,7 +59,7 @@ class DeepMapping_KITTI(nn.Module):
             sensor_pose, self.obs_local)
         self.valid_points = valid_points
         l_net_out = self.loc_net(self.obs_initial)
-        l_net_out[:, -1] = 0
+        # l_net_out[:, -1] = 0
         self.pose_est = l_net_out + sensor_pose
         # self.pose_est = cat_pose_KITTI(sensor_pose, self.loc_net(self.obs_initial))
         # self.bs = obs_local.shape[0]

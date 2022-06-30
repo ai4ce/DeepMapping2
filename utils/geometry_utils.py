@@ -94,8 +94,8 @@ def icp_o3d(src,dst,nv=None,n_iter=100,init_pose=[0,0,0],torlerance=1e-6,metrics
 
     # List of Convergence-Criteria for Multi-Scale ICP:
     criteria_list = [
-        treg.ICPConvergenceCriteria(relative_fitness=1e-6,
-                                    relative_rmse=1e-6,
+        treg.ICPConvergenceCriteria(relative_fitness=1e-5,
+                                    relative_rmse=1e-5,
                                     max_iteration=30),
         # treg.ICPConvergenceCriteria(1e-5, 1e-5, 30),
         # treg.ICPConvergenceCriteria(1e-6, 1e-6, 50)

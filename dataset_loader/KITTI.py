@@ -21,7 +21,7 @@ def find_valid_points(local_point_cloud):
 
     return valid_points
 
-class KITTI(Dataset):
+class Kitti(Dataset):
     def __init__(self, root, traj, voxel_size=1, init_pose=None,
                 group=False, group_size=8, pairwise=False, **kwargs):
         self.radius = 6378137 # earth radius
@@ -106,6 +106,25 @@ class KITTI(Dataset):
             return pcd, valid_points, init_global_pose, pairwise_pose
         else:
             return self.point_clouds[index]
+
+    def __len__(self):
+        return self.n_pc
+
+
+class KittiEval(Dataset):
+    def __init__(self, train_dataset):
+        super().__init__()
+        self.point_clouds = train_dataset.point_clouds
+        self.valid_points = train_dataset.valid_points
+        self.init_pose = train_dataset.init_pose
+        self.n_pc = train_dataset.n_pc
+        self.n_points = train_dataset.n_points
+        self.gt_pose = train_dataset.gt_pose
+
+    def __getitem__(self, index):
+        pcd = self.point_clouds[index, :, :] # <Nx3>
+        init_pose = self.init_pose[index, :] # <4>
+        return pcd, init_pose
 
     def __len__(self):
         return self.n_pc

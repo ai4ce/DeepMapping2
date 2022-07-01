@@ -51,13 +51,12 @@ class DeepMapping_KITTI(nn.Module):
         self.alpha = alpha
         self.beta = beta
 
-    def forward(self, obs_local, valid_points, sensor_pose, pairwise_pose):
+    def forward(self, obs_local, sensor_pose, valid_points=None, pairwise_pose=None):
         # obs_local: <BxGxNx3> 
         G = obs_local.shape[0]
         self.obs_local = obs_local
         self.obs_initial = transform_to_global_KITTI(
             sensor_pose, self.obs_local)
-        self.valid_points = valid_points
         l_net_out = self.loc_net(self.obs_initial)
         # l_net_out[:, -1] = 0
         self.pose_est = l_net_out + sensor_pose
@@ -68,6 +67,7 @@ class DeepMapping_KITTI(nn.Module):
             self.pose_est, self.obs_local)
 
         if self.training:
+            self.valid_points = valid_points
             pose_consis = self.pose_est[1:, :] + pairwise_pose
             # pose_consis = cat_pose_KITTI(pairwise_pose, self.pose_est[1:, :])
             self.centorid = self.obs_global_est[:1, :, :].expand(G-1, -1, -1)

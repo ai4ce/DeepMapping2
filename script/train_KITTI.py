@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 import utils
 import loss
 from models import DeepMapping_KITTI
-from dataset_loader import KITTI
+from dataset_loader import Kitti, KittiEval
 from tqdm import tqdm
 
 torch.backends.cudnn.deterministic = True
@@ -67,9 +67,11 @@ else:
     pairwise_pose = None
 
 print('loading dataset')
-dataset = KITTI(opt.data_dir, opt.traj, opt.voxel_size, init_pose=init_pose, 
+train_dataset = Kitti(opt.data_dir, opt.traj, opt.voxel_size, init_pose=init_pose, 
         group=opt.group, group_size=opt.group_size, pairwise=opt.pairwise, pairwise_pose=pairwise_pose)
-loader = DataLoader(dataset, batch_size=None, num_workers=4)
+train_loader = DataLoader(train_dataset, batch_size=None, num_workers=4)
+eval_dataset = KittiEval(train_dataset)
+eval_loader = DataLoader(eval_dataset, batch_size=128, num_workers=4)
 # if opt.group:
 #     group_sampler = GroupSampler(dataset.group_matrix)
 #     train_loader = DataLoader(dataset,batch_size=opt.batch_size, shuffle=False, sampler=group_sampler, num_workers=8)
@@ -78,7 +80,7 @@ loader = DataLoader(dataset, batch_size=None, num_workers=4)
 loss_fn = eval('loss.'+opt.loss)
 
 print('creating model')
-model = DeepMapping_KITTI(n_points=dataset.n_points, loss_fn=loss_fn,
+model = DeepMapping_KITTI(n_points=train_dataset.n_points, loss_fn=loss_fn,
     n_samples=opt.n_samples, alpha=opt.alpha, beta=opt.beta).to(device)
 
 if opt.optimizer == "Adam":
@@ -108,61 +110,57 @@ for epoch in range(starting_epoch, opt.n_epochs):
     training_loss= 0.0
     model.train()
 
-    for index,(obs, valid_pt, init_global_pose, pairwise_pose) in enumerate(loader):
-        obs = obs.to(device)
-        valid_pt = valid_pt.to(device)
-        init_global_pose = init_global_pose.to(device)
-        pairwise_pose = pairwise_pose.to(device)
-        loss = model(obs, valid_pt, init_global_pose, pairwise_pose)
+    # for index,(obs, valid_pt, init_global_pose, pairwise_pose) in enumerate(train_loader):
+    #     obs = obs.to(device)
+    #     valid_pt = valid_pt.to(device)
+    #     init_global_pose = init_global_pose.to(device)
+    #     pairwise_pose = pairwise_pose.to(device)
+    #     loss = model(obs, init_global_pose, valid_pt, pairwise_pose)
 
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+    #     optimizer.zero_grad()
+    #     loss.backward()
+    #     optimizer.step()
 
-        training_loss += loss.item()
+    #     training_loss += loss.item()
     
-    training_loss_epoch = training_loss/len(loader)
-    training_losses.append(training_losses)
+    training_loss_epoch = training_loss/len(train_loader)
+    training_losses.append(training_loss_epoch)
 
     print('[{}/{}], training loss: {:.4f}'.format(epoch+1,opt.n_epochs,training_loss_epoch))
     obs_global_est_np = []
     pose_est_np = []
     with torch.no_grad():
         model.eval()
-        for index,(obs, valid_pt, init_global_pose, pairwise_pose) in enumerate(loader):
+        for index,(obs, init_global_pose) in enumerate(eval_loader):
             obs = obs.to(device)
-            valid_pt = valid_pt.to(device)
             init_global_pose = init_global_pose.to(device)
-            pairwise_pose = pairwise_pose.to(device)
-            model(obs, valid_pt, init_global_pose, pairwise_pose)
+            model(obs, init_global_pose)
 
-            obs_global_est = model.obs_global_est[0]
-            pose_est = model.pose_est[0]
+            obs_global_est = model.obs_global_est
+            pose_est = model.pose_est
             obs_global_est_np.append(obs_global_est.cpu().detach().numpy())
             pose_est_np.append(pose_est.cpu().detach().numpy())
         
-    pose_est_np = np.stack(pose_est_np)
+    pose_est_np = np.concatenate(pose_est_np)
 
     save_name = os.path.join(checkpoint_dir, "pose_ests", str(epoch+1))
     np.save(save_name,pose_est_np)
 
     utils.plot_global_pose(checkpoint_dir, epoch+1)
 
-    training_losses.append(training_loss_epoch)
-    trans_ate, rot_ate = utils.compute_ate(pose_est_np, dataset.gt_pose)
+    trans_ate, rot_ate = utils.compute_ate(pose_est_np, train_dataset.gt_pose)
     trans_ates.append(trans_ate)
     rot_ates.append(rot_ate)
-    trans_save_name = os.path.join(checkpoint_dir, "translation_ate")
-    rot_save_name = os.path.join(checkpoint_dir, "rotation_ate")
     utils.plot_curve(trans_ates, "translation_ate", checkpoint_dir)
     utils.plot_curve(rot_ates, "rotation_ate", checkpoint_dir)
+    utils.plot_curve(training_losses, "training_loss", checkpoint_dir)
 
     if training_loss_epoch < best_loss:
         print("lowest loss:", training_loss_epoch)
         best_loss = training_loss_epoch
 
         # Visulize global point clouds
-        obs_global_est_np = np.stack(obs_global_est_np)
+        obs_global_est_np = np.concatenate(obs_global_est_np)
         save_name = os.path.join(checkpoint_dir,'obs_global_est.npy')
         np.save(save_name,obs_global_est_np)
 

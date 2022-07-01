@@ -3,14 +3,14 @@ sys.path.insert(0, '../../')
 
 import numpy as np
 import matplotlib.pyplot as plt
-from dataset_loader import KITTI
+from dataset_loader import Kitti
 from matplotlib import cm, colors, rc
 
 rc('image', cmap='rainbow_r')
 data_dir = '../../data/kitti'
 traj = "2011_09_26_drive_0036_sync"
 print("loading dataset")
-dataset = dataset = KITTI(data_dir, traj, 1)
+dataset = dataset = Kitti(data_dir, traj, 1)
 print("ploting")
 location = dataset.gt_pose
 t = np.arange(location.shape[0]) / location.shape[0]

@@ -9,7 +9,7 @@ print = functools.partial(print,flush=True)
 import numpy as np
 import open3d as o3d
 
-from dataset_loader import KITTI
+from dataset_loader import Kitti
 import utils
 
 parser = argparse.ArgumentParser()
@@ -24,7 +24,7 @@ voxel_size = opt.voxel_size
 traj = train_opt['traj']
 
 # load ground truth poses
-dataset = KITTI(data_dir,traj,voxel_size)
+dataset = Kitti(data_dir,traj,voxel_size)
 gt_pose = dataset.gt_pose
 
 # load predicted poses

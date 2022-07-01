@@ -9,7 +9,7 @@ import numpy as np
 
 import utils
 import open3d as o3d
-from dataset_loader import KITTI
+from dataset_loader import Kitti
 from matplotlib import rc
 from tqdm import tqdm
 
@@ -28,7 +28,7 @@ if not os.path.exists(checkpoint_dir):
 utils.save_opt(checkpoint_dir,opt)
 
 print('loading dataset')
-dataset = KITTI(opt.data_dir, opt.traj, opt.voxel_size, group=False, group_size=2, pairwise=False)
+dataset = Kitti(opt.data_dir, opt.traj, opt.voxel_size, group=False, group_size=2, pairwise=False)
 n_pc = len(dataset)
 
 pose_est = np.zeros((n_pc, 4),dtype=np.float32)

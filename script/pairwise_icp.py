@@ -5,7 +5,7 @@ import numpy as np
 import torch
 
 import utils
-from dataset_loader import KITTI
+from dataset_loader import Kitti
 from tqdm import tqdm
 
 parser = argparse.ArgumentParser()
@@ -30,10 +30,10 @@ if opt.mode == "global":
     init_pose_np = np.load(init)
     init_pose_np = init_pose_np.astype("float32")
     init_pose = torch.from_numpy(init_pose_np)
-    dataset = KITTI(opt.data_dir, opt.traj, opt.voxel_size, init_pose=init_pose,
+    dataset = Kitti(opt.data_dir, opt.traj, opt.voxel_size, init_pose=init_pose,
      group=True, group_size=opt.group_size, pairwise=False)
 elif opt.mode == "local":
-    dataset = KITTI(opt.data_dir, opt.traj, opt.voxel_size, group=True, group_size=opt.group_size, pairwise=False)
+    dataset = Kitti(opt.data_dir, opt.traj, opt.voxel_size, group=True, group_size=opt.group_size, pairwise=False)
 else:
     assert()
 n_pc = len(dataset)

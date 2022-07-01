@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 import utils
 import loss
 from models import DeepMapping_KITTI
-from dataset_loader import KITTI, GroupSampler
+from dataset_loader import Kitti, GroupSampler
 
 torch.backends.cudnn.deterministic = True
 torch.manual_seed(42)
@@ -52,7 +52,7 @@ else:
 
 
 print('loading dataset')
-dataset = KITTI(opt.data_dir,opt.traj,opt.voxel_size, trans_by_pose=init_pose, loop_group=opt.group, group_size=opt.group_size)
+dataset = Kitti(opt.data_dir,opt.traj,opt.voxel_size, trans_by_pose=init_pose, loop_group=opt.group, group_size=opt.group_size)
 loader = DataLoader(dataset,batch_size=opt.batch_size, shuffle=False, num_workers=20, pin_memory=True)
 if opt.group:
     group_sampler = GroupSampler(dataset.group_matrix)

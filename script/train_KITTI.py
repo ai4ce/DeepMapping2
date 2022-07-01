@@ -1,5 +1,6 @@
 import set_path
 import os
+import time
 import argparse
 import functools
 print = functools.partial(print,flush=True)
@@ -69,9 +70,9 @@ else:
 print('loading dataset')
 train_dataset = Kitti(opt.data_dir, opt.traj, opt.voxel_size, init_pose=init_pose, 
         group=opt.group, group_size=opt.group_size, pairwise=opt.pairwise, pairwise_pose=pairwise_pose)
-train_loader = DataLoader(train_dataset, batch_size=None, num_workers=4)
+train_loader = DataLoader(train_dataset, batch_size=None, num_workers=8)
 eval_dataset = KittiEval(train_dataset)
-eval_loader = DataLoader(eval_dataset, batch_size=128, num_workers=4)
+eval_loader = DataLoader(eval_dataset, batch_size=128, num_workers=8)
 # if opt.group:
 #     group_sampler = GroupSampler(dataset.group_matrix)
 #     train_loader = DataLoader(dataset,batch_size=opt.batch_size, shuffle=False, sampler=group_sampler, num_workers=8)
@@ -110,19 +111,22 @@ for epoch in range(starting_epoch, opt.n_epochs):
     training_loss= 0.0
     model.train()
 
-    # for index,(obs, valid_pt, init_global_pose, pairwise_pose) in enumerate(train_loader):
-    #     obs = obs.to(device)
-    #     valid_pt = valid_pt.to(device)
-    #     init_global_pose = init_global_pose.to(device)
-    #     pairwise_pose = pairwise_pose.to(device)
-    #     loss = model(obs, init_global_pose, valid_pt, pairwise_pose)
+    time_start = time.time()
+    for index,(obs, valid_pt, init_global_pose, pairwise_pose) in enumerate(train_loader):
+        obs = obs.to(device)
+        valid_pt = valid_pt.to(device)
+        init_global_pose = init_global_pose.to(device)
+        pairwise_pose = pairwise_pose.to(device)
+        loss = model(obs, init_global_pose, valid_pt, pairwise_pose)
 
-    #     optimizer.zero_grad()
-    #     loss.backward()
-    #     optimizer.step()
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
-    #     training_loss += loss.item()
+        training_loss += loss.item()
     
+    time_end = time.time()
+    print("Training time: {:.2f}s".format(time_end - time_start))
     training_loss_epoch = training_loss/len(train_loader)
     training_losses.append(training_loss_epoch)
 

@@ -45,6 +45,8 @@ opt = parser.parse_args()
 checkpoint_dir = os.path.join('../results/KITTI',opt.name)
 if not os.path.exists(checkpoint_dir):
     os.makedirs(checkpoint_dir)
+if not os.path.exists(os.path.join(checkpoint_dir, "pose_ests")):
+    os.makedirs(os.path.join(checkpoint_dir, "pose_ests"))
 utils.save_opt(checkpoint_dir,opt)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -99,6 +101,9 @@ else:
 
 print('start training')
 best_loss = 200
+training_losses = []
+trans_ates = []
+rot_ates = []
 for epoch in range(starting_epoch, opt.n_epochs):
     training_loss= 0.0
     model.train()
@@ -117,44 +122,50 @@ for epoch in range(starting_epoch, opt.n_epochs):
         training_loss += loss.item()
     
     training_loss_epoch = training_loss/len(loader)
+    training_losses.append(training_losses)
 
-    if (epoch+1) % opt.log_interval == 0:
-        print('[{}/{}], training loss: {:.4f}'.format(
-            epoch+1,opt.n_epochs,training_loss_epoch))
+    print('[{}/{}], training loss: {:.4f}'.format(epoch+1,opt.n_epochs,training_loss_epoch))
+    obs_global_est_np = []
+    pose_est_np = []
+    with torch.no_grad():
+        model.eval()
+        for index,(obs, valid_pt, init_global_pose, pairwise_pose) in enumerate(loader):
+            obs = obs.to(device)
+            valid_pt = valid_pt.to(device)
+            init_global_pose = init_global_pose.to(device)
+            pairwise_pose = pairwise_pose.to(device)
+            model(obs, valid_pt, init_global_pose, pairwise_pose)
+
+            obs_global_est = model.obs_global_est[0]
+            pose_est = model.pose_est[0]
+            obs_global_est_np.append(obs_global_est.cpu().detach().numpy())
+            pose_est_np.append(pose_est.cpu().detach().numpy())
+        
+    pose_est_np = np.stack(pose_est_np)
+
+    save_name = os.path.join(checkpoint_dir, "pose_ests", str(epoch+1))
+    np.save(save_name,pose_est_np)
+
+    utils.plot_global_pose(checkpoint_dir, epoch+1)
+
+    training_losses.append(training_loss_epoch)
+    trans_ate, rot_ate = utils.compute_ate(pose_est_np, dataset.gt_pose)
+    trans_ates.append(trans_ate)
+    rot_ates.append(rot_ate)
+    trans_save_name = os.path.join(checkpoint_dir, "translation_ate")
+    rot_save_name = os.path.join(checkpoint_dir, "rotation_ate")
+    utils.plot_curve(trans_ates, "translation_ate", checkpoint_dir)
+    utils.plot_curve(rot_ates, "rotation_ate", checkpoint_dir)
+
     if training_loss_epoch < best_loss:
         print("lowest loss:", training_loss_epoch)
         best_loss = training_loss_epoch
-        obs_global_est_np = []
-        pose_est_np = []
-        with torch.no_grad():
-            model.eval()
-            for index,(obs, valid_pt, init_global_pose, pairwise_pose) in enumerate(loader):
-                obs = obs.to(device)
-                valid_pt = valid_pt.to(device)
-                init_global_pose = init_global_pose.to(device)
-                pairwise_pose = pairwise_pose.to(device)
-                model(obs, valid_pt, init_global_pose, pairwise_pose)
 
-                obs_global_est = model.obs_global_est[0]
-                pose_est = model.pose_est[0]
-                obs_global_est_np.append(obs_global_est.cpu().detach().numpy())
-                pose_est_np.append(pose_est.cpu().detach().numpy())
-            
-            pose_est_np = np.stack(pose_est_np)
-            # if init_pose is not None:
-            #    pose_est_np = utils.cat_pose_AVD(init_pose_np,pose_est_np)
-            
-            save_name = os.path.join(checkpoint_dir,'model_best.pth')
-            utils.save_checkpoint(save_name,model,optimizer,epoch)
+        # Visulize global point clouds
+        obs_global_est_np = np.stack(obs_global_est_np)
+        save_name = os.path.join(checkpoint_dir,'obs_global_est.npy')
+        np.save(save_name,obs_global_est_np)
 
-            obs_global_est_np = np.stack(obs_global_est_np)
-            #kwargs = {'e':epoch+1}
-            #valid_pt_np = dataset.valid_points.cpu().detach().numpy()
-
-            save_name = os.path.join(checkpoint_dir,'obs_global_est.npy')
-            np.save(save_name,obs_global_est_np)
-
-            save_name = os.path.join(checkpoint_dir,'pose_global_est.npy')
-            np.save(save_name,pose_est_np)
-
-            utils.plot_global_pose(checkpoint_dir, epoch)
+        # Save checkpoint
+        save_name = os.path.join(checkpoint_dir,'model_best.pth')
+        utils.save_checkpoint(save_name,model,optimizer,epoch)

@@ -74,3 +74,9 @@ def plot_global_pose(checkpoint_dir, epoch=None, mode=None):
             os.mkdir(os.path.join(checkpoint_dir, "vis_traj"))
         plt.savefig(os.path.join(checkpoint_dir, "vis_traj", "pose_"+str(epoch)+".png"), dpi=600)
     plt.close()
+
+def plot_curve(data, title, checkpoint_dir):
+    plt.plot(data)
+    plt.title(title)
+    plt.savefig(os.path.join(checkpoint_dir, title+".png"))
+    plt.close()

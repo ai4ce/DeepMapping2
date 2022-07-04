@@ -3,6 +3,7 @@ import os
 import argparse
 import numpy as np
 import torch
+import open3d as o3d
 
 import utils
 from dataset_loader import Kitti
@@ -24,30 +25,22 @@ if not os.path.exists(checkpoint_dir):
 utils.save_opt(checkpoint_dir,opt)
 
 print('loading dataset')
-if opt.mode == "global":
-    init = os.path.join(checkpoint_dir, "pose_est_icp.npy")
-    print("loading initial pose from:", init)
-    init_pose_np = np.load(init)
-    init_pose_np = init_pose_np.astype("float32")
-    init_pose = torch.from_numpy(init_pose_np)
-    dataset = Kitti(opt.data_dir, opt.traj, opt.voxel_size, init_pose=init_pose,
-     group=True, group_size=opt.group_size, pairwise=False)
-elif opt.mode == "local":
-    dataset = Kitti(opt.data_dir, opt.traj, opt.voxel_size, group=True, group_size=opt.group_size, pairwise=False)
-else:
-    assert()
-n_pc = len(dataset)
+dataset_dir = os.path.join(opt.data_dir, opt.traj)
+pcd_files = sorted(os.listdir(dataset_dir))
+while pcd_files[-1][-3:] != "pcd":
+    pcd_files.pop()
+n_pc = len(pcd_files)
+group_matrix = np.load(os.path.join(dataset_dir, "group_matrix.npy"))[:, :opt.group_size]
+pcd_files = np.asarray(pcd_files)
 
 pose_est = np.zeros((n_pc, opt.group_size-1, 4),dtype=np.float32)
 print('running icp')
 for idx in tqdm(range(n_pc)):
     for group_idx in range(1, opt.group_size):
-        indices = dataset.group_matrix[idx]
-        pcds = dataset[idx][0]
-        if opt.mode == "global":
-            pcds = utils.transform_to_global_KITTI(dataset[idx][2], pcds)
-        dst = pcds[0].numpy()
-        src = pcds[group_idx].numpy()
+        indices = group_matrix[idx]
+        pcd_file_batch = pcd_files[indices]
+        dst = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_file_batch[0])).voxel_down_sample(opt.voxel_size)
+        src = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_file_batch[group_idx])).voxel_down_sample(opt.voxel_size)
 
         _, R, t = utils.icp_o3d(src,dst)
         # if idx == 0: 

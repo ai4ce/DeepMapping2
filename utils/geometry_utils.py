@@ -63,7 +63,7 @@ def rigid_transform_kD(A, B):
     return R, t
 
 
-def icp_o3d(src,dst,nv=None,n_iter=100,init_pose=[0,0,0],torlerance=1e-6,metrics='point',verbose=False):
+def icp_o3d(src,dst,voxel_size=1):
     '''
     Don't support init_pose and only supports 3dof now.
     Args:
@@ -84,13 +84,13 @@ def icp_o3d(src,dst,nv=None,n_iter=100,init_pose=[0,0,0],torlerance=1e-6,metrics
     dtype = o3d.core.float32
     treg = o3d.t.pipelines.registration
     src_pcd = o3d.t.geometry.PointCloud(device)
-    src_pcd.point["positions"] = o3d.core.Tensor(src, dtype, device)
+    src_pcd.point["positions"] = o3d.core.Tensor(np.asarray(src.points), dtype, device)
     src_pcd.estimate_normals()
     dst_pcd = o3d.t.geometry.PointCloud(device)
-    dst_pcd.point["positions"] = o3d.core.Tensor(dst, dtype, device)
+    dst_pcd.point["positions"] = o3d.core.Tensor(np.asarray(dst.points), dtype, device)
     dst_pcd.estimate_normals()
 
-    voxel_sizes = o3d.utility.DoubleVector([1])
+    voxel_sizes = o3d.utility.DoubleVector([voxel_size])
 
     # List of Convergence-Criteria for Multi-Scale ICP:
     criteria_list = [
@@ -102,7 +102,7 @@ def icp_o3d(src,dst,nv=None,n_iter=100,init_pose=[0,0,0],torlerance=1e-6,metrics
     ]
 
     # `max_correspondence_distances` for Multi-Scale ICP (o3d.utility.DoubleVector):
-    max_correspondence_distances = o3d.utility.DoubleVector([3])
+    max_correspondence_distances = o3d.utility.DoubleVector([3 * voxel_size])
 
     # Initial alignment or source to target transform.
     init_source_to_target = o3d.core.Tensor.eye(4, o3d.core.Dtype.Float64)

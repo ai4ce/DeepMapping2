@@ -28,16 +28,23 @@ if not os.path.exists(checkpoint_dir):
 utils.save_opt(checkpoint_dir,opt)
 
 print('loading dataset')
-dataset = Kitti(opt.data_dir, opt.traj, opt.voxel_size, group=False, group_size=2, pairwise=False)
-n_pc = len(dataset)
+# dataset = Kitti(opt.data_dir, opt.traj, opt.voxel_size, group=False, group_size=2, pairwise=False)
+# n_pc = len(dataset)
+dataset_dir = os.path.join(opt.data_dir, opt.traj)
+pcd_files = sorted(os.listdir(dataset_dir))
+while pcd_files[-1][-3:] != "pcd":
+    pcd_files.pop()
+n_pc = len(pcd_files)
 
 pose_est = np.zeros((n_pc, 4),dtype=np.float32)
 print('running icp')
 for idx in tqdm(range(n_pc-1)):
-    dst = dataset[idx].numpy()
-    src = dataset[idx+1].numpy()
+    # dst = dataset[idx].numpy()
+    # src = dataset[idx+1].numpy()
+    dst = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[idx])).voxel_down_sample(opt.voxel_size)
+    src = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[idx+1])).voxel_down_sample(opt.voxel_size)
 
-    _, R0, t0 = utils.icp_o3d(src,dst)
+    _, R0, t0 = utils.icp_o3d(src,dst,voxel_size=opt.voxel_size)
     if idx == 0: 
         R_cum = R0
         t_cum = t0
@@ -54,8 +61,6 @@ np.save(save_name,pose_est)
 print('saving results')
 utils.plot_global_pose(checkpoint_dir, mode="prior")
 # calculate ate
-print(pose_est.shape)
-print(dataset.gt_pose.shape)
-trans_ate, rot_ate = utils.compute_ate(pose_est, dataset.gt_pose) 
-print('{}, translation ate: {}'.format(opt.name,trans_ate))
-print('{}, rotation ate: {}'.format(opt.name,rot_ate))
+# trans_ate, rot_ate = utils.compute_ate(pose_est, dataset.gt_pose) 
+# print('{}, translation ate: {}'.format(opt.name,trans_ate))
+# print('{}, rotation ate: {}'.format(opt.name,rot_ate))

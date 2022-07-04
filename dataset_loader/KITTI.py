@@ -23,7 +23,7 @@ def find_valid_points(local_point_cloud):
 
 class Kitti(Dataset):
     def __init__(self, root, traj, voxel_size=1, init_pose=None,
-                group=False, group_size=8, pairwise=False, **kwargs):
+                group=False, group_size=8, pairwise=False, use_tqdm=True, **kwargs):
         self.radius = 6378137 # earth radius
         self.root = root
         self.traj = traj
@@ -45,7 +45,7 @@ class Kitti(Dataset):
             pass
         point_clouds = []
         max_points = 0
-        for file in tqdm(files):
+        for file in tqdm(files, disable=not use_tqdm):
             # xyz = np.load(os.path.join(data_folder, file))
             # pcd = o3d.geometry.PointCloud()
             # pcd.points = o3d.utility.Vector3dVector(xyz)

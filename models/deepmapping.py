@@ -57,9 +57,9 @@ class DeepMapping_KITTI(nn.Module):
         self.obs_local = obs_local
         self.obs_initial = transform_to_global_KITTI(
             sensor_pose, self.obs_local)
-        l_net_out = self.loc_net(self.obs_initial)
+        self.l_net_out = self.loc_net(self.obs_initial)
         # l_net_out[:, -1] = 0
-        self.pose_est = l_net_out + sensor_pose
+        self.pose_est = self.l_net_out + sensor_pose
         # self.pose_est = cat_pose_KITTI(sensor_pose, self.loc_net(self.obs_initial))
         # self.bs = obs_local.shape[0]
         # self.obs_local = self.obs_local.reshape(self.bs,-1,3)
@@ -100,5 +100,8 @@ class DeepMapping_KITTI(nn.Module):
             loss = self.loss_fn(self.occp_prob, self.gt, bce_weight)  # BCE
         elif self.loss_fn.__name__ == 'bce_ch_eu':
             loss = self.loss_fn(self.occp_prob, self.gt, self.obs_global_est, self.relative_centroid, self.centorid,
-                                self.valid_points, bce_weight, seq=2, alpha=self.alpha, beta=self.beta)  # BCE_CH
+                                self.valid_points, bce_weight, seq=2, alpha=self.alpha, beta=self.beta)
+        elif self.loss_fn.__name__ == 'bce_ch_eu_rg':
+            loss = self.loss_fn(self.occp_prob, self.gt, self.obs_global_est, self.relative_centroid, self.centorid, self.l_net_out[:, -1], 
+                                self.valid_points, bce_weight, seq=2, alpha=self.alpha, beta=self.beta)
         return loss

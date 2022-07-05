@@ -1,6 +1,7 @@
 from .chamfer_dist import chamfer_loss
 from .bce_loss import bce
 from .eu_loss import euclidean_loss
+from .regularization import rgl_loss
 
 
 def bce_ch(pred, targets, obs_global, valid_obs=None, bce_weight=None, seq=2, gamma=0.1):
@@ -21,3 +22,10 @@ def bce_ch_eu(pred, targets, obs_global, src, dst, valid_obs=None, bce_weight=No
     ch_loss = chamfer_loss(obs_global, valid_obs, seq)
     eu_loss = euclidean_loss(src, dst)
     return (1-alpha-beta) * bce_loss + alpha * ch_loss + beta * eu_loss
+
+def bce_ch_eu_rg(pred, targets, obs_global, src, dst, rotation, valid_obs=None, bce_weight=None, seq=2, alpha=0.1, beta=0.1, gamma=0.1):
+    bce_loss = bce(pred, targets, bce_weight)
+    ch_loss = chamfer_loss(obs_global, valid_obs, seq)
+    eu_loss = euclidean_loss(src, dst)
+    rg_loss = rgl_loss(rotation)
+    return (1-alpha-beta) * bce_loss + alpha * ch_loss + beta * eu_loss + gamma * rg_loss

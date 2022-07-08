@@ -102,6 +102,6 @@ class DeepMapping_KITTI(nn.Module):
             loss = self.loss_fn(self.occp_prob, self.gt, self.obs_global_est, self.relative_centroid, self.centorid,
                                 self.valid_points, bce_weight, seq=2, alpha=self.alpha, beta=self.beta)
         elif self.loss_fn.__name__ == 'bce_ch_eu_rg':
-            loss = self.loss_fn(self.occp_prob, self.gt, self.obs_global_est, self.relative_centroid, self.centorid, self.l_net_out[:, -1], 
+            loss = self.loss_fn(self.occp_prob, self.gt, self.obs_global_est, self.relative_centroid, self.centorid, self.l_net_out, 
                                 self.valid_points, bce_weight, seq=2, alpha=self.alpha, beta=self.beta)
         return loss

@@ -26,6 +26,7 @@ checkpoint_dir = os.path.join('../results/KITTI',opt.name)
 if not os.path.exists(checkpoint_dir):
     os.makedirs(checkpoint_dir)
 utils.save_opt(checkpoint_dir,opt)
+radius = 6378137 # earth radius
 
 print('loading dataset')
 # dataset = Kitti(opt.data_dir, opt.traj, opt.voxel_size, group=False, group_size=2, pairwise=False)
@@ -61,6 +62,14 @@ np.save(save_name,pose_est)
 print('saving results')
 utils.plot_global_pose(checkpoint_dir, mode="prior")
 # calculate ate
-# trans_ate, rot_ate = utils.compute_ate(pose_est, dataset.gt_pose) 
-# print('{}, translation ate: {}'.format(opt.name,trans_ate))
-# print('{}, rotation ate: {}'.format(opt.name,rot_ate))
+gt_pose = np.load(os.path.join(dataset_dir, "gt_pose.npy"))
+gt_pose[:, :2] *= np.pi / 180
+lat_0 = gt_pose[0, 0]
+gt_pose[:, 1] *= radius * np.cos(lat_0)
+gt_pose[:, 0] *= radius
+gt_pose[:, 1] -= gt_pose[0, 1]
+gt_pose[:, 0] -= gt_pose[0, 0]
+gt_pose = gt_pose[:, [1, 0, 2, 5]]
+trans_ate, rot_ate = utils.compute_ate(pose_est, gt_pose) 
+print('{}, translation ate: {}'.format(opt.name,trans_ate))
+print('{}, rotation ate: {}'.format(opt.name,rot_ate))

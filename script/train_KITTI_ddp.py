@@ -15,6 +15,7 @@ import loss
 from models import DeepMapping_KITTI
 from dataset_loader import Kitti, KittiEval
 from tqdm import tqdm
+from time import sleep
 
 
 import torch.multiprocessing as mp
@@ -52,6 +53,7 @@ def ddp_func(rank, world_size, opt):
     else:
         pairwise_pose = None
 
+    sleep(int(rank) * 5) # prevent different processes reading same file
     if rank == 0:
         print('loading dataset')
         train_dataset = Kitti(opt.data_dir, opt.traj, opt.voxel_size, init_pose=init_pose, 
@@ -205,5 +207,3 @@ if __name__ == '__main__':
                 args=(world_size, opt),
                 nprocs=world_size,
                 join=True)
-
-    utils.cleanup()

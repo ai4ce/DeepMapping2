@@ -53,7 +53,7 @@ def ddp_func(rank, world_size, opt):
     else:
         pairwise_pose = None
 
-    sleep(int(rank) * 5) # prevent different processes reading same file
+    # sleep(int(rank) * 5) # prevent different processes reading same file
     if rank == 0:
         print('loading dataset')
         train_dataset = Kitti(opt.data_dir, opt.traj, opt.voxel_size, init_pose=init_pose, 

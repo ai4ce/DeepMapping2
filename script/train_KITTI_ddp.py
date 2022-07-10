@@ -75,9 +75,9 @@ def ddp_func(rank, world_size, opt):
     ddp_model = DDP(model, device_ids=[rank])
 
     if opt.optimizer == "Adam":
-        optimizer = optim.Adam(model.parameters(),lr=opt.lr)
+        optimizer = optim.Adam(ddp_model.parameters(),lr=opt.lr)
     elif opt.optimizer == "SGD":
-        optimizer = optim.SGD(model.parameters(), lr=opt.lr, momentum=0.9)
+        optimizer = optim.SGD(ddp_model.parameters(), lr=opt.lr, momentum=0.9)
     else:
         print("Unsupported optimizer")
         assert()
@@ -105,7 +105,7 @@ def ddp_func(rank, world_size, opt):
         
     for epoch in range(starting_epoch, opt.n_epochs):
         training_loss= 0.0
-        model.train()
+        ddp_model.train()
 
         time_start = time.time()
         for index,(obs, valid_pt, init_global_pose, pairwise_pose) in enumerate(train_loader):
@@ -113,7 +113,7 @@ def ddp_func(rank, world_size, opt):
             valid_pt = valid_pt.to(rank)
             init_global_pose = init_global_pose.to(rank)
             pairwise_pose = pairwise_pose.to(rank)
-            loss = model(obs, init_global_pose, valid_pt, pairwise_pose)
+            loss = ddp_model(obs, init_global_pose, valid_pt, pairwise_pose)
 
             optimizer.zero_grad()
             loss.backward()
@@ -131,14 +131,14 @@ def ddp_func(rank, world_size, opt):
             obs_global_est_np = []
             pose_est_np = []
             with torch.no_grad():
-                model.eval()
+                ddp_model.eval()
                 for index,(obs, init_global_pose) in enumerate(eval_loader):
                     obs = obs.to(rank)
                     init_global_pose = init_global_pose.to(rank)
-                    model(obs, init_global_pose)
+                    ddp_model(obs, init_global_pose)
 
-                    obs_global_est = model.obs_global_est
-                    pose_est = model.pose_est
+                    obs_global_est = ddp_model.obs_global_est
+                    pose_est = ddp_model.pose_est
                     obs_global_est_np.append(obs_global_est.cpu().detach().numpy())
                     pose_est_np.append(pose_est.cpu().detach().numpy())
                 
@@ -167,7 +167,7 @@ def ddp_func(rank, world_size, opt):
 
                 # Save checkpoint
                 save_name = os.path.join(checkpoint_dir,'model_best.pth')
-                utils.save_checkpoint(save_name,model,optimizer,epoch)
+                utils.save_checkpoint(save_name,ddp_model,optimizer,epoch)
     utils.cleanup()
 
 

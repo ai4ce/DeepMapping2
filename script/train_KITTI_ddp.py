@@ -137,8 +137,8 @@ def ddp_func(rank, world_size, opt):
                     init_global_pose = init_global_pose.to(rank)
                     ddp_model(obs, init_global_pose)
 
-                    obs_global_est = ddp_model.obs_global_est
-                    pose_est = ddp_model.pose_est
+                    obs_global_est = ddp_model.module.obs_global_est
+                    pose_est = ddp_model.module.pose_est
                     obs_global_est_np.append(obs_global_est.cpu().detach().numpy())
                     pose_est_np.append(pose_est.cpu().detach().numpy())
                 

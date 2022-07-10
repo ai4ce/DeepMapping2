@@ -3,25 +3,45 @@ import numpy as np
 import open3d as o3d
 from open3d import pipelines
 from sklearn.neighbors import NearestNeighbors
+from scipy.spatial.transform import Rotation as R
+from .pytorch3d_utils import *
 import sys
+
+
+# def transform_to_global_KITTI(pose, obs_local):
+#     """
+#     transform obs local coordinate to global corrdinate frame
+#     :param pose: <Nx4> <x,y,z,theta>
+#     :param obs_local: <BxNx3> 
+#     :return obs_global: <BxNx3>
+#     """
+#     # translation
+#     assert obs_local.shape[0] == pose.shape[0]
+#     theta = pose[:, 3:]
+#     cos_theta = torch.cos(theta)
+#     sin_theta = torch.sin(theta)
+#     rotation_matrix = torch.cat((cos_theta, sin_theta, -sin_theta, cos_theta), dim=1).reshape(-1, 2, 2)
+#     xy = obs_local[:, :, :2]
+#     xy_rotated = torch.bmm(xy, rotation_matrix)
+#     obs_global = torch.cat((xy_rotated, obs_local[:, :, [2]]), dim=2)
+#     # obs_global[:, :, 0] = obs_global[:, :, 0] + pose[:, [0]]
+#     # obs_global[:, :, 1] = obs_global[:, :, 1] + pose[:, [1]]
+#     obs_global = obs_global + pose[:, :3].unsqueeze(1)
+#     return obs_global
 
 
 def transform_to_global_KITTI(pose, obs_local):
     """
     transform obs local coordinate to global corrdinate frame
-    :param pose: <Nx4> <x,y,z,theta>
+    :param pose: <Bx6> <x, y, z, row, pitch, yaw>
     :param obs_local: <BxNx3> 
     :return obs_global: <BxNx3>
     """
     # translation
     assert obs_local.shape[0] == pose.shape[0]
-    theta = pose[:, 3:]
-    cos_theta = torch.cos(theta)
-    sin_theta = torch.sin(theta)
-    rotation_matrix = torch.cat((cos_theta, sin_theta, -sin_theta, cos_theta), dim=1).reshape(-1, 2, 2)
-    xy = obs_local[:, :, :2]
-    xy_rotated = torch.bmm(xy, rotation_matrix)
-    obs_global = torch.cat((xy_rotated, obs_local[:, :, [2]]), dim=2)
+    rpy = pose[:, 3:]
+    rotation_matrix = euler_angles_to_matrix(rpy, convention="XYZ")
+    obs_global = torch.bmm(obs_local, rotation_matrix.transpose(1, 2))
     # obs_global[:, :, 0] = obs_global[:, :, 0] + pose[:, [0]]
     # obs_global[:, :, 1] = obs_global[:, :, 1] + pose[:, [1]]
     obs_global = obs_global + pose[:, :3].unsqueeze(1)
@@ -129,8 +149,8 @@ def compute_ate(output,target):
     """
     compute absolute trajectory error for avd dataset
     Args:
-        output: <Nx4> predicted trajectory positions, where N is #scans
-        target: <Nx4> ground truth trajectory positions
+        output: <Nx6> predicted trajectory positions, where N is #scans
+        target: <Nx6> ground truth trajectory positions
     Returns:
         trans_ate: <N> translation absolute trajectory error for each pose
         rot_ate: <N> rotation absolute trajectory error for each pose
@@ -140,14 +160,14 @@ def compute_ate(output,target):
     R, t = rigid_transform_kD(output_location,target_location)
     location_aligned = np.matmul(R , output_location.T) + t
     location_aligned = location_aligned.T
-    yaw_aligned = np.arctan2(R[1,0],R[0,0]) + output[:, 3]
+    yaw_aligned = np.arctan2(R[1,0],R[0,0]) + output[:, -1]
     while np.any(yaw_aligned > np.pi):
         yaw_aligned[yaw_aligned > np.pi] = yaw_aligned[yaw_aligned > np.pi] - 2 * np.pi
     while np.any(yaw_aligned < -np.pi):
         yaw_aligned[yaw_aligned < np.pi] = yaw_aligned[yaw_aligned < np.pi] + 2 * np.pi
 
     trans_error = np.linalg.norm(location_aligned - target_location, axis=1)
-    rot_error = np.linalg.norm(yaw_aligned - target[:, 3])
+    rot_error = np.linalg.norm(yaw_aligned - target[:, -1])
     
     trans_ate = np.sqrt(np.mean(trans_error))
     rot_ate = np.sqrt(np.mean(rot_error))
@@ -167,28 +187,6 @@ def remove_invalid_pcd(pcd):
     return valid_pcd
 
 
-def ang2mat_tensor(theta):
-    c = torch.cos(theta)
-    s = torch.sin(theta)
-    one = torch.ones_like(theta)
-    zero = torch.zeros_like(theta)
-    R = torch.stack((c, -s, zero, s, c, zero, zero, zero, one)).transpose(0, 1).reshape(-1, 3, 3)
-    return R
-
-
-def cat_pose_KITTI(pose0, pose1):
-    """
-    pose0, pose1: <Nx4>, torch tensor
-    each row: <x,y,z,theta>
-    """
-    assert(pose0.shape==pose1.shape)
-    R0 = ang2mat_tensor(pose0[:, -1])
-    R1 = ang2mat_tensor(pose1[:, -1])
-    t0 = pose0[:, :-1]
-    t1 = pose1[:, :-1]
-        
-    R = torch.bmm(R0, R1)
-    theta = torch.atan2(R[:, 1, 0], R[:, 0, 0]).unsqueeze(1)
-    t = torch.bmm(R, t0) + t1
-    pose_out = torch.cat((t, theta), dim=1)
-    return pose_out
+def mat2ang_np(mat):
+    r = R.from_matrix(mat)
+    return r.as_euler("XYZ", degrees=False)

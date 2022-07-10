@@ -32,7 +32,7 @@ class Kitti(Dataset):
         self.group_flag = group
         self.pairwise_flag = pairwise
         if self.pairwise_flag:
-            self.pairwise_pose = kwargs["pairwise_pose"]
+            self.pairwise_pose = kwargs["pairwise_pose"][:, :group_size-1]
         if self.pairwise_flag and not self.group_flag:
             print("Pairwise registration needs group information")
             assert()
@@ -72,7 +72,8 @@ class Kitti(Dataset):
         gt_pose[:, 1] -= gt_pose[0, 1]
         gt_pose[:, 0] -= gt_pose[0, 0]
         self.point_clouds = torch.from_numpy(np.stack(point_clouds)).float() # <BxNx3>
-        self.gt_pose = gt_pose[:, [1, 0, 2, 5]] # <Nx4>
+        self.gt_pose = gt_pose # <Nx6>
+        self.gt_pose[:, [0, 1]] = self.gt_pose[:, [1, 0]]
         self.n_pc = self.point_clouds.shape[0]
         self.n_points = self.point_clouds.shape[1]
         self.valid_points = find_valid_points(self.point_clouds)
@@ -97,12 +98,12 @@ class Kitti(Dataset):
                 init_global_pose = self.init_pose[indices, :] # <Gx4>
                 # pcd = utils.transform_to_global_KITTI(pose, pcd).squeeze(0)
             else:
-                init_global_pose = torch.zeros(self.group_matrix.shape[1], 4)
+                init_global_pose = torch.zeros(self.group_matrix.shape[1], 6)
             if self.pairwise_flag:
                 pairwise_pose = self.pairwise_pose[index]
                 pairwise_pose = torch.tensor(pairwise_pose)
             else:
-                pairwise_pose = torch.zeros(indices.shape[0]-1, 4)
+                pairwise_pose = torch.zeros(indices.shape[0]-1, 6)
             return pcd, valid_points, init_global_pose, pairwise_pose
         else:
             return self.point_clouds[index]

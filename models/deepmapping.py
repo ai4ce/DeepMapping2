@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from .networks import LocNetRegKITTI, MLP
-from utils import transform_to_global_KITTI, cat_pose_KITTI
+from utils import transform_to_global_KITTI
 
 def get_M_net_inputs_labels(occupied_points, unoccupited_points):
     """
@@ -46,7 +46,7 @@ class DeepMapping_KITTI(nn.Module):
         self.n_samples = n_samples
         self.loss_fn = loss_fn
         self.n_points = n_points
-        self.loc_net = LocNetRegKITTI(n_points=n_points, out_dims=4) # <x,y,z,theta>
+        self.loc_net = LocNetRegKITTI(n_points=n_points, out_dims=6) # <x,y,z,theta>
         self.occup_net = MLP(dim)
         self.alpha = alpha
         self.beta = beta

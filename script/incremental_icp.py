@@ -37,7 +37,7 @@ while pcd_files[-1][-3:] != "pcd":
     pcd_files.pop()
 n_pc = len(pcd_files)
 
-pose_est = np.zeros((n_pc, 4),dtype=np.float32)
+pose_est = np.zeros((n_pc, 6),dtype=np.float32)
 print('running icp')
 for idx in tqdm(range(n_pc-1)):
     # dst = dataset[idx].numpy()

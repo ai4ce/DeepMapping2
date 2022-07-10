@@ -42,7 +42,7 @@ n_pc = len(pcd_files)
 group_matrix = np.load(os.path.join(dataset_dir, "group_matrix.npy"))[:, :opt.group_size]
 pcd_files = np.asarray(pcd_files)
 
-pose_est = np.zeros((n_pc, 4),dtype=np.float32)
+pose_est = np.zeros((n_pc, 6),dtype=np.float32)
 print('running icp')
 
 # dataset.group_flag = False
@@ -61,7 +61,7 @@ for idx in tqdm(range(n_pc-1)):
         t_cum = np.matmul(R_cum, t0) + t_cum
     
     pose_est[idx+1, :3] = t_cum[:3].T
-    pose_est[idx+1, 3] = np.arctan2(R_cum[1,0],R_cum[0,0]) 
+    pose_est[idx+1, 3:] = utils.mat2ang_np(R_cum)
 
 save_name = os.path.join(checkpoint_dir,'pose_est_icp.npy')
 np.save(save_name,pose_est)
@@ -76,13 +76,14 @@ gt_pose[:, 1] *= radius * np.cos(lat_0)
 gt_pose[:, 0] *= radius
 gt_pose[:, 1] -= gt_pose[0, 1]
 gt_pose[:, 0] -= gt_pose[0, 0]
-gt_pose = gt_pose[:, [1, 0, 2, 5]]
+# gt_pose = gt_pose[:, [1, 0, 2, 5]]
+gt_pose[:, [0, 1]] = gt_pose[:, [1, 0]]
 trans_ate, rot_ate = utils.compute_ate(pose_est, gt_pose) 
 print('{}, translation ate: {}'.format(opt.name,trans_ate))
 print('{}, rotation ate: {}'.format(opt.name,rot_ate))
 
 print("Running pairwise registraion")
-pose_est = np.zeros((n_pc, opt.group_size-1, 4),dtype=np.float32)
+pose_est = np.zeros((n_pc, opt.group_size-1, 6),dtype=np.float32)
 for idx in tqdm(range(n_pc)):
     for group_idx in range(1, opt.group_size):
         indices = group_matrix[idx]
@@ -100,7 +101,7 @@ for idx in tqdm(range(n_pc)):
         # # print(R_cum.shape)
         # # print(t_cum.shape)
         pose_est[idx, group_idx-1, :3] = t[:3].T
-        pose_est[idx, group_idx-1, 3] = np.arctan2(R[1,0],R[0,0]) 
+        pose_est[idx, group_idx-1, 3:] = utils.mat2ang_np(R)
 
 save_name = os.path.join(checkpoint_dir,'pose_pairwise.npy')
 np.save(save_name,pose_est)

@@ -37,7 +37,7 @@ class Kitti(Dataset):
             print("Pairwise registration needs group information")
             assert()
 
-        files = os.listdir(data_folder)
+        files = sorted(os.listdir(data_folder))
         files.remove('gt_pose.npy')
         try:
             files.remove('group_matrix.npy')

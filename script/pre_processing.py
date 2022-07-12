@@ -20,7 +20,7 @@ parser.add_argument('-d','--data_dir',type=str,default='../data/2D/',help='datas
 parser.add_argument('-t','--traj',type=str,default='traj1.txt',help='trajectory file name')
 parser.add_argument('-v','--voxel_size',type=float,default=1,help='size of downsampling voxel grid')
 parser.add_argument('--group_size',type=int,default=4,help='size of group')
-parser.add_argument('--mode',type=str,default="local",help='local or global frame registraion')
+parser.add_argument('--mode',type=str,default="icp",help='local or global frame registraion')
 opt = parser.parse_args()
 rc('image', cmap='rainbow_r')
 
@@ -86,22 +86,25 @@ print("Running pairwise registraion")
 pose_est = np.zeros((n_pc, opt.group_size-1, 6),dtype=np.float32)
 for idx in tqdm(range(n_pc)):
     for group_idx in range(1, opt.group_size):
-        indices = group_matrix[idx]
-        pcd_file_batch = pcd_files[indices]
-        dst = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_file_batch[0])).voxel_down_sample(opt.voxel_size)
-        src = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_file_batch[group_idx])).voxel_down_sample(opt.voxel_size)
+        if opt.mode == "icp":
+            indices = group_matrix[idx]
+            pcd_file_batch = pcd_files[indices]
+            dst = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_file_batch[0])).voxel_down_sample(opt.voxel_size)
+            src = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_file_batch[group_idx])).voxel_down_sample(opt.voxel_size)
 
-        _, R, t = utils.icp_o3d(src,dst)
-        # if idx == 0: 
-        #     R_cum = R0
-        #     t_cum = t0
-        # else:
-        #     R_cum = np.matmul(R_cum, R0)
-        #     t_cum = np.matmul(R_cum, t0) + t_cum
-        # # print(R_cum.shape)
-        # # print(t_cum.shape)
-        pose_est[idx, group_idx-1, :3] = t[:3].T
-        pose_est[idx, group_idx-1, 3:] = utils.mat2ang_np(R)
+            _, R, t = utils.icp_o3d(src,dst)
+            # if idx == 0: 
+            #     R_cum = R0
+            #     t_cum = t0
+            # else:
+            #     R_cum = np.matmul(R_cum, R0)
+            #     t_cum = np.matmul(R_cum, t0) + t_cum
+            # # print(R_cum.shape)
+            # # print(t_cum.shape)
+            pose_est[idx, group_idx-1, :3] = t[:3].T
+            pose_est[idx, group_idx-1, 3:] = utils.mat2ang_np(R)
+        elif opt.mode == "gt":
+            pose_est[idx, group_idx-1] = gt_pose[group_matrix[idx, 0]] - gt_pose[group_matrix[idx, group_idx]]
 
 save_name = os.path.join(checkpoint_dir,'pose_pairwise.npy')
 np.save(save_name,pose_est)

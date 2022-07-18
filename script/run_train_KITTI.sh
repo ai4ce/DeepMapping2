@@ -23,7 +23,7 @@ VOXEL=1
 # group
 GROUP=1
 # goupr size
-G_SIZE=4
+G_SIZE=8
 # learning rate
 LR=0.0001
 # chamfer loss weight
@@ -37,6 +37,7 @@ BETA=0.1
 #### warm start
 #### uncomment the following commands to run DeepMapping with a warm start. This requires an initial sensor pose that can be computed using ./script/run_icp.sh
 # mkdir /mnt/NAS/home/xinhao/deepmapping/main/results/KITTI/$NAME
-# cp /mnt/NAS/home/xinhao/deepmapping/main/results/KITTI/KITTI_0018_pairwise/pose_est_icp.npy /mnt/NAS/home/xinhao/deepmapping/main/results/KITTI/$NAME
+# cp ../results/KITTI/KITTI_0027_icp/pose_est_icp.npy ../results/KITTI/$NAME
+# cp ../results/KITTI/KITTI_0027_icp/pose_pairwise.npy ../results/KITTI/$NAME
 INIT_POSE=../results/KITTI/$NAME/pose_est_icp.npy
-CUDA_VISIBLE_DEVICES=1 python train_KITTI.py --alpha $ALPHA --beta $BETA --pairwise --lr $LR --name $NAME -d $DATA_DIR -t ${TRAJ} -i $INIT_POSE -e $EPOCH -l $LOSS -n $N -v $VOXEL --log_interval $LOG -g $GROUP --group_size $G_SIZE
+CUDA_VISIBLE_DEVICES=2 python train_KITTI.py --alpha $ALPHA --beta $BETA --pairwise --lr $LR --name $NAME -d $DATA_DIR -t ${TRAJ} -i $INIT_POSE -e $EPOCH -l $LOSS -n $N -v $VOXEL --log_interval $LOG -g $GROUP --group_size $G_SIZE

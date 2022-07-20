@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from .networks import LocNetRegKITTI, MLP
-from utils import transform_to_global_KITTI, cat_pair_global
+from utils import transform_to_global_KITTI
 
 def get_M_net_inputs_labels(occupied_points, unoccupited_points):
     """

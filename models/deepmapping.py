@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from .networks import LocNetRegKITTI, MLP
-from utils import transform_to_global_KITTI
+from utils import transform_to_global_KITTI, cat_pair_global
 
 def get_M_net_inputs_labels(occupied_points, unoccupited_points):
     """
@@ -68,12 +68,12 @@ class DeepMapping_KITTI(nn.Module):
 
         if self.training:
             self.valid_points = valid_points
-            pose_consis = self.pose_est[1:, :] + pairwise_pose
-            # pose_consis = cat_pose_KITTI(pairwise_pose, self.pose_est[1:, :])
+            # pose_consis = self.pose_est[1:, :] + pairwise_pose
             self.centorid = self.obs_global_est[:1, :, :].expand(G-1, -1, -1)
             relative_centroid_local = self.obs_local[:1, :, :].expand(G-1, -1, -1)
             self.relative_centroid = transform_to_global_KITTI(
-                pose_consis, relative_centroid_local
+                self.pose_est[1:, :], 
+                transform_to_global_KITTI(pairwise_pose, relative_centroid_local)
             )
             self.unoccupied_local = sample_unoccupied_point(
                 self.obs_local, self.n_samples)

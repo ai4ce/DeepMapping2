@@ -190,3 +190,8 @@ def remove_invalid_pcd(pcd):
 def mat2ang_np(mat):
     r = R.from_matrix(mat)
     return r.as_euler("XYZ", degrees=False)
+
+
+def ang2mat_np(ang):
+    r = R.from_euler("XYZ", ang)
+    return r.as_matrix()

@@ -89,8 +89,8 @@ for idx in tqdm(range(n_pc)):
         if opt.mode == "icp":
             indices = group_matrix[idx]
             pcd_file_batch = pcd_files[indices]
-            dst = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_file_batch[0])).voxel_down_sample(opt.voxel_size)
-            src = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_file_batch[group_idx])).voxel_down_sample(opt.voxel_size)
+            src = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_file_batch[0])).voxel_down_sample(opt.voxel_size)
+            dst = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_file_batch[group_idx])).voxel_down_sample(opt.voxel_size)
 
             _, R, t = utils.icp_o3d(src,dst)
             # if idx == 0: 

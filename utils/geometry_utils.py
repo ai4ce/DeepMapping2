@@ -83,7 +83,7 @@ def rigid_transform_kD(A, B):
     return R, t
 
 
-def icp_o3d(src,dst,voxel_size=1):
+def icp_o3d(src, dst, voxel_size=0.5):
     '''
     Don't support init_pose and only supports 3dof now.
     Args:
@@ -100,49 +100,21 @@ def icp_o3d(src,dst,voxel_size=1):
         t: translation vector
         R*src + t
     '''
-    device = o3d.core.Device("CPU:0")
-    dtype = o3d.core.float32
-    treg = o3d.t.pipelines.registration
-    src_pcd = o3d.t.geometry.PointCloud(device)
-    src_pcd.point["positions"] = o3d.core.Tensor(np.asarray(src.points), dtype, device)
-    src_pcd.estimate_normals()
-    dst_pcd = o3d.t.geometry.PointCloud(device)
-    dst_pcd.point["positions"] = o3d.core.Tensor(np.asarray(dst.points), dtype, device)
-    dst_pcd.estimate_normals()
-
-    voxel_sizes = o3d.utility.DoubleVector([voxel_size])
-
     # List of Convergence-Criteria for Multi-Scale ICP:
-    criteria_list = [
-        treg.ICPConvergenceCriteria(relative_fitness=1e-5,
-                                    relative_rmse=1e-5,
-                                    max_iteration=30),
-        # treg.ICPConvergenceCriteria(1e-5, 1e-5, 30),
-        # treg.ICPConvergenceCriteria(1e-6, 1e-6, 50)
-    ]
+    threshold = 2.5 * voxel_size
+    trans_init = np.eye(4)
+    criteria = o3d.pipelines.registration.ICPConvergenceCriteria(1e-6, 1e-6, max_iteration=80)
 
-    # `max_correspondence_distances` for Multi-Scale ICP (o3d.utility.DoubleVector):
-    max_correspondence_distances = o3d.utility.DoubleVector([3 * voxel_size])
+    registration = o3d.pipelines.registration.registration_icp(
+        src, dst, threshold, trans_init,
+        o3d.pipelines.registration.TransformationEstimationPointToPlane(),
+        criteria
+    )
 
-    # Initial alignment or source to target transform.
-    init_source_to_target = o3d.core.Tensor.eye(4, o3d.core.Dtype.Float64)
-
-    # Select the `Estimation Method`, and `Robust Kernel` (for outlier-rejection).
-    estimation = treg.TransformationEstimationPointToPlane()
-
-    # Save iteration wise `fitness`, `inlier_rmse`, etc. to analyse and tune result.
-    save_loss_log = True
-
-    registration_ms_icp = treg.multi_scale_icp(src_pcd, dst_pcd, voxel_sizes,
-                                           criteria_list,
-                                           max_correspondence_distances,
-                                           init_source_to_target, estimation,
-                                           save_loss_log)
-
-    transformation = registration_ms_icp.transformation
+    transformation = registration.transformation
     R = transformation[:3, :3]
     t = transformation[:3, 3:]
-    return None, R.numpy(), t.numpy()
+    return R.copy(), t.copy()
 
 
 def compute_ate(output,target):

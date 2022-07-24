@@ -41,18 +41,20 @@ while pcd_files[-1][-3:] != "pcd":
 n_pc = len(pcd_files)
 group_matrix = np.load(os.path.join(dataset_dir, "group_matrix.npy"))[:, :opt.group_size]
 pcd_files = np.asarray(pcd_files)
+pcds = []
+for i in tqdm(range(len(pcd_files))):
+    pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[i])).voxel_down_sample(opt.voxel_size)
+    pcd.estimate_normals()
+    pcds.append(pcd)
 
 pose_est = np.zeros((n_pc, 6),dtype=np.float32)
 print('running icp')
 
 # dataset.group_flag = False
 for idx in tqdm(range(n_pc-1)):
-    # dst = dataset[idx].numpy()
-    # src = dataset[idx+1].numpy()
-    dst = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[idx])).voxel_down_sample(opt.voxel_size)
-    src = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[idx+1])).voxel_down_sample(opt.voxel_size)
-
-    _, R0, t0 = utils.icp_o3d(src,dst)
+    dst = pcds[idx]
+    src = pcds[idx+1]
+    R0, t0 = utils.icp_o3d(src, dst, opt.voxel_size)
     if idx == 0: 
         R_cum = R0
         t_cum = t0
@@ -87,20 +89,9 @@ pose_est = np.zeros((n_pc, opt.group_size-1, 6),dtype=np.float32)
 for idx in tqdm(range(n_pc)):
     for group_idx in range(1, opt.group_size):
         if opt.mode == "icp":
-            indices = group_matrix[idx]
-            pcd_file_batch = pcd_files[indices]
-            src = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_file_batch[0])).voxel_down_sample(opt.voxel_size)
-            dst = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_file_batch[group_idx])).voxel_down_sample(opt.voxel_size)
-
-            _, R, t = utils.icp_o3d(src,dst)
-            # if idx == 0: 
-            #     R_cum = R0
-            #     t_cum = t0
-            # else:
-            #     R_cum = np.matmul(R_cum, R0)
-            #     t_cum = np.matmul(R_cum, t0) + t_cum
-            # # print(R_cum.shape)
-            # # print(t_cum.shape)
+            src = pcds[group_matrix[idx, 0]]
+            dst = pcds[group_matrix[idx, group_idx]]
+            R, t = utils.icp_o3d(src, dst, opt.voxel_size)
             pose_est[idx, group_idx-1, :3] = t[:3].T
             pose_est[idx, group_idx-1, 3:] = utils.mat2ang_np(R)
         elif opt.mode == "gt":

@@ -153,6 +153,8 @@ for epoch in range(starting_epoch, opt.n_epochs):
     utils.plot_global_pose(checkpoint_dir, epoch+1)
 
     trans_ate, rot_ate = utils.compute_ate(pose_est_np, train_dataset.gt_pose)
+    print("Translation ATE:", trans_ate)
+    print("Rotation ATE", rot_ate)
     trans_ates.append(trans_ate)
     rot_ates.append(rot_ate)
     utils.plot_curve(trans_ates, "translation_ate", checkpoint_dir)

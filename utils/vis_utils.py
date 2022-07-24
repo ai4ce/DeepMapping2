@@ -76,7 +76,7 @@ def plot_global_pose(checkpoint_dir, epoch=None, mode=None):
     plt.close()
 
 def plot_curve(data, title, checkpoint_dir):
-    plt.plot(data)
+    plt.plot(np.arange(1, len(data)+1), data)
     plt.title(title)
     plt.savefig(os.path.join(checkpoint_dir, title+".png"))
     plt.close()

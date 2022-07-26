@@ -70,7 +70,7 @@ else:
 print('loading dataset')
 train_dataset = Kitti(opt.data_dir, opt.traj, opt.voxel_size, init_pose=init_pose, 
         group=opt.group, group_size=opt.group_size, pairwise=opt.pairwise, pairwise_pose=pairwise_pose)
-train_loader = DataLoader(train_dataset, batch_size=None, num_workers=8)
+train_loader = DataLoader(train_dataset, batch_size=None, num_workers=8, shuffle=True)
 eval_dataset = KittiEval(train_dataset)
 eval_loader = DataLoader(eval_dataset, batch_size=64, num_workers=8)
 # if opt.group:

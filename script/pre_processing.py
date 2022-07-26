@@ -24,9 +24,8 @@ parser.add_argument('--mode',type=str,default="icp",help='local or global frame 
 opt = parser.parse_args()
 rc('image', cmap='rainbow_r')
 
-radius = 6378137 # earth radius
-
-checkpoint_dir = os.path.join('../results/KITTI',opt.name)
+dataset = opt.data_dir.split("/")[-1]
+checkpoint_dir = os.path.join('../results', dataset,opt.name)
 if not os.path.exists(checkpoint_dir):
     os.makedirs(checkpoint_dir)
 utils.save_opt(checkpoint_dir,opt)
@@ -42,10 +41,19 @@ n_pc = len(pcd_files)
 group_matrix = np.load(os.path.join(dataset_dir, "group_matrix.npy"))[:, :opt.group_size]
 pcd_files = np.asarray(pcd_files)
 pcds = []
-for i in tqdm(range(len(pcd_files))):
-    pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[i])).voxel_down_sample(opt.voxel_size)
-    pcd.estimate_normals()
-    pcds.append(pcd)
+if dataset == "KITTI":
+    for i in tqdm(range(len(pcd_files))):
+        pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[i])).voxel_down_sample(opt.voxel_size)
+        pcd.estimate_normals()
+        pcds.append(pcd)
+elif dataset == "NCLT":
+    for i in tqdm(range(len(pcd_files))):
+        pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[i]))
+        points = np.asarray(pcd.points)
+        pcd = pcd.select_by_index(np.where(np.linalg.norm(points, axis=1) < 100)[0])
+        pcd = pcd.voxel_down_sample(opt.voxel_size)
+        pcd.estimate_normals()
+        pcds.append(pcd)
 
 pose_est = np.zeros((n_pc, 6),dtype=np.float32)
 print('running icp')
@@ -72,14 +80,16 @@ print('saving results')
 utils.plot_global_pose(checkpoint_dir, mode="prior")
 # calculate ate
 gt_pose = np.load(os.path.join(dataset_dir, "gt_pose.npy"))
-gt_pose[:, :2] *= np.pi / 180
-lat_0 = gt_pose[0, 0]
-gt_pose[:, 1] *= radius * np.cos(lat_0)
-gt_pose[:, 0] *= radius
-gt_pose[:, 1] -= gt_pose[0, 1]
-gt_pose[:, 0] -= gt_pose[0, 0]
-# gt_pose = gt_pose[:, [1, 0, 2, 5]]
-gt_pose[:, [0, 1]] = gt_pose[:, [1, 0]]
+if dataset == "KITTI": 
+    gt_pose[:, :2] *= np.pi / 180
+    lat_0 = gt_pose[0, 0]
+    radius = 6378137 # earth radius
+    gt_pose[:, 1] *= radius * np.cos(lat_0)
+    gt_pose[:, 0] *= radius
+    gt_pose[:, 1] -= gt_pose[0, 1]
+    gt_pose[:, 0] -= gt_pose[0, 0]
+    # gt_pose = gt_pose[:, [1, 0, 2, 5]]
+    gt_pose[:, [0, 1]] = gt_pose[:, [1, 0]]
 trans_ate, rot_ate = utils.compute_ate(pose_est, gt_pose) 
 print('{}, translation ate: {}'.format(opt.name,trans_ate))
 print('{}, rotation ate: {}'.format(opt.name,rot_ate))

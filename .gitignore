@@ -5,6 +5,7 @@
 *.json
 script/helpful_functions/traj_vis
 *.png
+*.sqf
 
 #bash
 *.err

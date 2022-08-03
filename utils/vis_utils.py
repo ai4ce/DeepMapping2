@@ -47,10 +47,12 @@ def save_global_point_cloud_open3d(point_cloud,pose,save_dir):
     plt.savefig(save_name)
     plt.close()
 
-def plot_global_pose(checkpoint_dir, epoch=None, mode=None):
+def plot_global_pose(checkpoint_dir, dataset="kitti", epoch=None, mode=None):
     rc('image', cmap='rainbow_r')
     if mode == "prior":
         location = np.load(os.path.join(checkpoint_dir, "pose_est_icp.npy"))
+    elif mode == "gt":
+        location = np.load(os.path.join(checkpoint_dir, "gt_pose.npy"))
     else:
         location = np.load(os.path.join(checkpoint_dir, "pose_ests", str(epoch)+".npy"))
     t = np.arange(location.shape[0]) / location.shape[0]
@@ -60,7 +62,12 @@ def plot_global_pose(checkpoint_dir, epoch=None, mode=None):
     v = np.sin(location[:, -1]) * 2
     fig, ax = plt.subplots()
     fig.set_size_inches(15, 10)
-    ax.quiver(location[:, 0], location[:, 1], u, v, t, scale=10, scale_units='inches', width=2e-3)
+    if dataset.lower() == "kitti":
+        ax.quiver(location[:, 0], location[:, 1], u, v, t, scale=10, scale_units='inches', width=2e-3)
+    elif dataset.lower() == "nclt":
+        ax.quiver(location[:, 0], location[:, 1], u, v, t, scale=20, scale_units='inches', width=1e-3)
+    else:
+        assert 0, "Unsupported dataset"
 
     ax.axis('equal')
     ax.tick_params(axis='both', labelsize=18)
@@ -68,10 +75,15 @@ def plot_global_pose(checkpoint_dir, epoch=None, mode=None):
     cbar = fig.colorbar(cm.ScalarMappable(norm=norm, cmap='rainbow_r'))
     cbar.ax.tick_params(labelsize=18)
     if mode == 'prior':
+        ax.set_title("Warm Start", fontsize=32)
         plt.savefig(os.path.join(checkpoint_dir, "pose_prior.png"), dpi=600)
+    elif mode == "gt":
+        ax.set_title("Ground Truth", fontsize=32)
+        plt.savefig(os.path.join(checkpoint_dir, "pose_gt.png"), dpi=600)
     else:
         if not os.path.exists(os.path.join(checkpoint_dir, "vis_traj")):
             os.mkdir(os.path.join(checkpoint_dir, "vis_traj"))
+        ax.set_title("Epoch "+str(epoch), fontsize=32)
         plt.savefig(os.path.join(checkpoint_dir, "vis_traj", "pose_"+str(epoch)+".png"), dpi=600)
     plt.close()
 

@@ -77,7 +77,7 @@ save_name = os.path.join(checkpoint_dir,'pose_est_icp.npy')
 np.save(save_name,pose_est)
 
 print('saving results')
-utils.plot_global_pose(checkpoint_dir, mode="prior")
+utils.plot_global_pose(checkpoint_dir, dataset, mode="prior")
 # calculate ate
 gt_pose = np.load(os.path.join(dataset_dir, "gt_pose.npy"))
 if dataset == "KITTI": 

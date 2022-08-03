@@ -7,6 +7,9 @@ script/helpful_functions/traj_vis
 *.png
 *.sqf
 
+# misc
+misc/
+
 #bash
 *.err
 *.out

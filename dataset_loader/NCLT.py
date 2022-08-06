@@ -50,10 +50,13 @@ class Nclt(Dataset):
             pcd = pcd.voxel_down_sample(voxel_size)
             pcd = np.asarray(pcd.points)
             point_clouds.append(pcd)
-            if max_points < pcd.shape[0]:
+            if max_points < pcd.shape[0] and pcd.shape[0] <= 6000:
                 max_points = pcd.shape[0]
         for i in range(len(point_clouds)):
-            point_clouds[i] = np.pad(point_clouds[i], ((0, max_points-point_clouds[i].shape[0]), (0, 0)))
+            if point_clouds[i].shape[0] < max_points:
+                point_clouds[i] = np.pad(point_clouds[i], ((0, max_points-point_clouds[i].shape[0]), (0, 0)))
+            else:
+                point_clouds[i] = point_clouds[i][:max_points]
 
         self.gt_pose = np.load(os.path.join(data_folder, 'gt_pose.npy')).astype('float32')
         self.point_clouds = torch.from_numpy(np.stack(point_clouds)).float() # <BxNx3>

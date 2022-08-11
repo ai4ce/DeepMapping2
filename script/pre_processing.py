@@ -40,29 +40,46 @@ while pcd_files[-1][-3:] != "pcd":
 n_pc = len(pcd_files)
 group_matrix = np.load(os.path.join(dataset_dir, "group_matrix.npy"))[:, :opt.group_size]
 pcd_files = np.asarray(pcd_files)
-pcds = []
-if dataset == "KITTI":
-    for i in tqdm(range(len(pcd_files))):
-        pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[i])).voxel_down_sample(opt.voxel_size)
-        pcd.estimate_normals()
-        pcds.append(pcd)
-elif dataset == "NCLT":
-    for i in tqdm(range(len(pcd_files))):
-        pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[i]))
-        points = np.asarray(pcd.points)
-        pcd = pcd.select_by_index(np.where(np.linalg.norm(points, axis=1) < 100)[0])
-        pcd = pcd.voxel_down_sample(opt.voxel_size)
-        pcd.estimate_normals()
-        pcds.append(pcd)
+# pcds = []
+# if dataset == "KITTI":
+#     for i in tqdm(range(len(pcd_files))):
+#         pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[i])).voxel_down_sample(opt.voxel_size)
+#         pcd.estimate_normals()
+#         pcds.append(pcd)
+# elif dataset == "NCLT":
+#     for i in tqdm(range(len(pcd_files))):
+#         pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[i]))
+#         points = np.asarray(pcd.points)
+#         pcd = pcd.select_by_index(np.where(np.linalg.norm(points, axis=1) < 100)[0])
+#         pcd = pcd.voxel_down_sample(opt.voxel_size)
+#         pcd.estimate_normals()
+#         pcds.append(pcd)
 
 pose_est = np.zeros((n_pc, 6),dtype=np.float32)
 print('running icp')
 
 # dataset.group_flag = False
 for idx in tqdm(range(n_pc-1)):
-    dst = pcds[idx]
-    src = pcds[idx+1]
-    R0, t0 = utils.icp_o3d(src, dst, opt.voxel_size)
+# for idx in tqdm(range(9999)):
+    if idx == 0:
+        dst_pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[0]))
+        points = np.asarray(dst_pcd.points)
+        dst_pcd = dst_pcd.select_by_index(np.where(np.linalg.norm(points, axis=1) < 100)[0])
+        dst_pcd = dst_pcd.voxel_down_sample(opt.voxel_size)
+        dst_pcd.estimate_normals()
+        src_pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[1]))
+        points = np.asarray(src_pcd.points)
+        src_pcd = src_pcd.select_by_index(np.where(np.linalg.norm(points, axis=1) < 100)[0])
+        src_pcd = src_pcd.voxel_down_sample(opt.voxel_size)
+        src_pcd.estimate_normals()
+    else:
+        dst_pcd = src_pcd
+        src_pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[idx+1]))
+        points = np.asarray(src_pcd.points)
+        src_pcd = src_pcd.select_by_index(np.where(np.linalg.norm(points, axis=1) < 100)[0])
+        src_pcd = src_pcd.voxel_down_sample(opt.voxel_size)
+        src_pcd.estimate_normals()
+    R0, t0 = utils.icp_o3d(src_pcd, dst_pcd, 0.5)
     if idx == 0: 
         R_cum = R0
         t_cum = t0
@@ -97,11 +114,21 @@ print('{}, rotation ate: {}'.format(opt.name,rot_ate))
 print("Running pairwise registraion")
 pose_est = np.zeros((n_pc, opt.group_size-1, 6),dtype=np.float32)
 for idx in tqdm(range(n_pc)):
+    src_pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[group_matrix[idx, 0]]))
+    points = np.asarray(src_pcd.points)
+    src_pcd = src_pcd.select_by_index(np.where(np.linalg.norm(points, axis=1) < 100)[0])
+    src_pcd = src_pcd.voxel_down_sample(opt.voxel_size)
+    src_pcd.estimate_normals()
     for group_idx in range(1, opt.group_size):
         if opt.mode == "icp":
-            src = pcds[group_matrix[idx, 0]]
-            dst = pcds[group_matrix[idx, group_idx]]
-            R, t = utils.icp_o3d(src, dst, opt.voxel_size)
+            # src = pcds[group_matrix[idx, 0]]
+            # dst = pcds[group_matrix[idx, group_idx]]
+            dst_pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[group_matrix[idx, group_idx]]))
+            points = np.asarray(dst_pcd.points)
+            dst_pcd = dst_pcd.select_by_index(np.where(np.linalg.norm(points, axis=1) < 100)[0])
+            dst_pcd = dst_pcd.voxel_down_sample(opt.voxel_size)
+            dst_pcd.estimate_normals()
+            R, t = utils.icp_o3d(src_pcd, dst_pcd, 0.5)
             pose_est[idx, group_idx-1, :3] = t[:3].T
             pose_est[idx, group_idx-1, 3:] = utils.mat2ang_np(R)
         elif opt.mode == "gt":

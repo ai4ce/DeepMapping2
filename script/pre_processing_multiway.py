@@ -40,7 +40,7 @@ parser.add_argument('--group_size',type=int,default=4,help='size of group')
 parser.add_argument('--mode',type=str,default="icp",help='local or global frame registraion')
 opt = parser.parse_args()
 rc('image', cmap='rainbow_r')
-
+print("group_size=", opt.group_size)
 
 dataset = opt.data_dir.split("/")[-1]
 if opt.data_dir == "/":
@@ -65,7 +65,7 @@ if dataset == "KITTI":
         pcd.estimate_normals()
         pcds.append(pcd)
 elif dataset == "NCLT":
-    for i in tqdm(range(len(pcd_files))):
+    for i in tqdm(range(0, len(pcd_files), 2)):
     # for i in tqdm(range(10000)):
         pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[i]))
         points = np.asarray(pcd.points)
@@ -81,31 +81,31 @@ pose_graph = o3d.pipelines.registration.PoseGraph()
 odometry = np.identity(4)
 pose_graph.nodes.append(o3d.pipelines.registration.PoseGraphNode(odometry))
 # n_pc=10000
-for source_id in tqdm(range(n_pc-1)):
+for source_id in tqdm(range(0, n_pc-1, 2)):
     transformation_icp, information_icp = pairwise_registration(
-            pcds[source_id], pcds[source_id+1], 1, 0.5)
+            pcds[source_id // 2], pcds[source_id//2+1], 1, 0.5)
     # transformation_icp, information_icp = np.identity(4), np.identity(6)
     odometry = np.dot(transformation_icp, odometry)
     pose_graph.nodes.append(
         o3d.pipelines.registration.PoseGraphNode(
             np.linalg.inv(odometry)))
     pose_graph.edges.append(
-        o3d.pipelines.registration.PoseGraphEdge(source_id,
-                                                    source_id+1,
+        o3d.pipelines.registration.PoseGraphEdge(source_id // 2,
+                                                    source_id // 2+1,
                                                     transformation_icp,
                                                     information_icp,
                                                     uncertain=False))
     for target_id in group_matrix[source_id]:
-        if target_id == source_id + 1 or target_id == source_id:
+        if target_id == source_id + 2 or target_id == source_id:
             continue
-        # if target_id >= 10000:
-        #     continue
+        if target_id % 2 != 0:
+            continue
         transformation_icp, information_icp = pairwise_registration(
-            pcds[source_id], pcds[target_id], 1, 0.5)
+            pcds[source_id // 2], pcds[target_id // 2], 1, 0.5)
         # transformation_icp, information_icp = np.identity(4), np.identity(6)
         pose_graph.edges.append(
-        o3d.pipelines.registration.PoseGraphEdge(source_id,
-                                                    target_id,
+        o3d.pipelines.registration.PoseGraphEdge(source_id // 2,
+                                                    target_id // 2,
                                                     transformation_icp,
                                                     information_icp,
                                                     uncertain=True))
@@ -134,7 +134,7 @@ with o3d.utility.VerbosityContextManager(
         option)
 
 print('saving results')
-for i in tqdm(range(n_pc)):
+for i in tqdm(range(n_pc // 2)):
     transformation = pose_graph.nodes[i].pose.copy()
     R, t = transformation[:3, :3], transformation[:3, 3:]
     pose_est[i, :3] = t[:3].T

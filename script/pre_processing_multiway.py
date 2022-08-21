@@ -43,12 +43,12 @@ rc('image', cmap='rainbow_r')
 
 
 dataset = opt.data_dir.split("/")[-1]
+if opt.data_dir == "/":
+    dataset = 'NCLT'
 checkpoint_dir = os.path.join('../results', dataset,opt.name)
 if not os.path.exists(checkpoint_dir):
     os.makedirs(checkpoint_dir)
 utils.save_opt(checkpoint_dir,opt)
-
-print('loading dataset')
 # dataset = Kitti(opt.data_dir, opt.traj, opt.voxel_size, group=True, group_size=opt.group_size, pairwise=False)
 # n_pc = len(dataset)
 dataset_dir = os.path.join(opt.data_dir, opt.traj)

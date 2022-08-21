@@ -59,64 +59,66 @@ n_pc = len(pcd_files)
 group_matrix = np.load(os.path.join(dataset_dir, "group_matrix.npy"))[:, :opt.group_size]
 pcd_files = np.asarray(pcd_files)
 pcds = []
-# if dataset == "KITTI":
-#     for i in tqdm(range(len(pcd_files))):
-#         pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[i])).voxel_down_sample(opt.voxel_size)
-#         pcd.estimate_normals()
-#         pcds.append(pcd)
-# elif dataset == "NCLT":
-#     for i in tqdm(range(len(pcd_files))):
-#     # for i in tqdm(range(5000)):
-#         pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[i]))
-#         points = np.asarray(pcd.points)
-#         pcd = pcd.select_by_index(np.where(np.linalg.norm(points, axis=1) < 100)[0])
-#         pcd = pcd.voxel_down_sample(opt.voxel_size)
-#         pcd.estimate_normals()
-#         pcds.append(pcd)
-# pose_est = np.zeros((n_pc, 6),dtype=np.float32)
-# print('running icp')
+if dataset == "KITTI":
+    for i in tqdm(range(len(pcd_files))):
+        pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[i])).voxel_down_sample(opt.voxel_size)
+        pcd.estimate_normals()
+        pcds.append(pcd)
+elif dataset == "NCLT":
+    for i in tqdm(range(len(pcd_files))):
+    # for i in tqdm(range(10000)):
+        pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[i]))
+        points = np.asarray(pcd.points)
+        pcd = pcd.select_by_index(np.where(np.linalg.norm(points, axis=1) < 100)[0])
+        pcd = pcd.voxel_down_sample(opt.voxel_size)
+        pcd.estimate_normals()
+        pcds.append(pcd)
+pose_est = np.zeros((n_pc, 6),dtype=np.float32)
+print('running icp')
 
 # # dataset.group_flag = False
 pose_graph = o3d.pipelines.registration.PoseGraph()
-# odometry = np.identity(4)
-# pose_graph.nodes.append(o3d.pipelines.registration.PoseGraphNode(odometry))
-# # n_pc=5000
-# for source_id in tqdm(range(n_pc-1)):
-#     transformation_icp, information_icp = pairwise_registration(
-#             pcds[source_id], pcds[source_id+1], 1, 0.5)
-#     odometry = np.dot(transformation_icp, odometry)
-#     pose_graph.nodes.append(
-#         o3d.pipelines.registration.PoseGraphNode(
-#             np.linalg.inv(odometry)))
-#     pose_graph.edges.append(
-#         o3d.pipelines.registration.PoseGraphEdge(source_id,
-#                                                     source_id+1,
-#                                                     transformation_icp,
-#                                                     information_icp,
-#                                                     uncertain=False))
-#     for target_id in group_matrix[source_id]:
-#         if target_id == source_id + 1:
-#             continue
-#         # if target_id >= 4999:
-#         #     continue
-#         transformation_icp, information_icp = pairwise_registration(
-#             pcds[source_id], pcds[target_id], 1, 0.5)
-#         pose_graph.edges.append(
-#         o3d.pipelines.registration.PoseGraphEdge(source_id,
-#                                                     target_id,
-#                                                     transformation_icp,
-#                                                     information_icp,
-#                                                     uncertain=True))
-# del pcds
-icp_pose = np.load("/mnt/NAS/home/xinhao/deepmapping/main/results/NCLT/NCLT_0108_icp/pose_est_icp.npy")
-pairwise_pose = np.load("/mnt/NAS/home/xinhao/deepmapping/main/results/NCLT/NCLT_0108_icp/pose_pairwise.npy")
+odometry = np.identity(4)
+pose_graph.nodes.append(o3d.pipelines.registration.PoseGraphNode(odometry))
+# n_pc=10000
 for source_id in tqdm(range(n_pc-1)):
+    transformation_icp, information_icp = pairwise_registration(
+            pcds[source_id], pcds[source_id+1], 1, 0.5)
+    # transformation_icp, information_icp = np.identity(4), np.identity(6)
+    odometry = np.dot(transformation_icp, odometry)
+    pose_graph.nodes.append(
+        o3d.pipelines.registration.PoseGraphNode(
+            np.linalg.inv(odometry)))
     pose_graph.edges.append(
         o3d.pipelines.registration.PoseGraphEdge(source_id,
                                                     source_id+1,
                                                     transformation_icp,
                                                     information_icp,
                                                     uncertain=False))
+    for target_id in group_matrix[source_id]:
+        if target_id == source_id + 1 or target_id == source_id:
+            continue
+        # if target_id >= 10000:
+        #     continue
+        transformation_icp, information_icp = pairwise_registration(
+            pcds[source_id], pcds[target_id], 1, 0.5)
+        # transformation_icp, information_icp = np.identity(4), np.identity(6)
+        pose_graph.edges.append(
+        o3d.pipelines.registration.PoseGraphEdge(source_id,
+                                                    target_id,
+                                                    transformation_icp,
+                                                    information_icp,
+                                                    uncertain=True))
+del pcds
+# icp_pose = np.load("/mnt/NAS/home/xinhao/deepmapping/main/results/NCLT/NCLT_0108_icp/pose_est_icp.npy")
+# pairwise_pose = np.load("/mnt/NAS/home/xinhao/deepmapping/main/results/NCLT/NCLT_0108_icp/pose_pairwise.npy")
+# for source_id in tqdm(range(n_pc-1)):
+#     pose_graph.edges.append(
+#         o3d.pipelines.registration.PoseGraphEdge(source_id,
+#                                                     source_id+1,
+#                                                     transformation_icp,
+#                                                     information_icp,
+#                                                     uncertain=False))
 
 print("Optimizing PoseGraph ...")
 option = o3d.pipelines.registration.GlobalOptimizationOption(

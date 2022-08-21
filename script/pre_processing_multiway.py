@@ -65,7 +65,7 @@ if dataset == "KITTI":
         pcd.estimate_normals()
         pcds.append(pcd)
 elif dataset == "NCLT":
-    for i in tqdm(range(0, len(pcd_files), 2)):
+    for i in tqdm(range(len(pcd_files))):
     # for i in tqdm(range(10000)):
         pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[i]))
         points = np.asarray(pcd.points)
@@ -83,7 +83,7 @@ pose_graph.nodes.append(o3d.pipelines.registration.PoseGraphNode(odometry))
 # n_pc=10000
 for source_id in tqdm(range(0, n_pc-1, 2)):
     transformation_icp, information_icp = pairwise_registration(
-            pcds[source_id // 2], pcds[source_id//2+1], 1, 0.5)
+            pcds[source_id], pcds[source_id+2], 1, 0.5)
     # transformation_icp, information_icp = np.identity(4), np.identity(6)
     odometry = np.dot(transformation_icp, odometry)
     pose_graph.nodes.append(
@@ -101,7 +101,7 @@ for source_id in tqdm(range(0, n_pc-1, 2)):
         if target_id % 2 != 0:
             continue
         transformation_icp, information_icp = pairwise_registration(
-            pcds[source_id // 2], pcds[target_id // 2], 1, 0.5)
+            pcds[source_id], pcds[target_id], 1, 0.5)
         # transformation_icp, information_icp = np.identity(4), np.identity(6)
         pose_graph.edges.append(
         o3d.pipelines.registration.PoseGraphEdge(source_id // 2,
@@ -109,7 +109,6 @@ for source_id in tqdm(range(0, n_pc-1, 2)):
                                                     transformation_icp,
                                                     information_icp,
                                                     uncertain=True))
-del pcds
 # icp_pose = np.load("/mnt/NAS/home/xinhao/deepmapping/main/results/NCLT/NCLT_0108_icp/pose_est_icp.npy")
 # pairwise_pose = np.load("/mnt/NAS/home/xinhao/deepmapping/main/results/NCLT/NCLT_0108_icp/pose_pairwise.npy")
 # for source_id in tqdm(range(n_pc-1)):
@@ -134,11 +133,22 @@ with o3d.utility.VerbosityContextManager(
         option)
 
 print('saving results')
-for i in tqdm(range(n_pc // 2)):
-    transformation = pose_graph.nodes[i].pose.copy()
-    R, t = transformation[:3, :3], transformation[:3, 3:]
-    pose_est[i, :3] = t[:3].T
-    pose_est[i, 3:] = utils.mat2ang_np(R)
+for i in tqdm(range(n_pc)):
+    if i % 2 == 0:
+        transformation = pose_graph.nodes[i].pose.copy()
+        R, t = transformation[:3, :3], transformation[:3, 3:]
+        pose_est[i, :3] = t[:3].T
+        pose_est[i, 3:] = utils.mat2ang_np(R)
+    else:
+        try:
+            transformation_icp, _ = pairwise_registration(
+                pcds[i-1], pcds[i], 1, 0.5)
+            transformation = np.dot(transformation_icp.copy(), pose_graph.nodes[(i-1) // 2].pose.copy())
+            R, t = transformation[:3, :3], transformation[:3, 3:]
+            pose_est[i, :3] = t[:3].T
+            pose_est[i, 3:] = utils.mat2ang_np(R)
+        except Exception as e:
+            print(e)
 save_name = os.path.join(checkpoint_dir,'pose_est_icp.npy')
 np.save(save_name,pose_est)
 

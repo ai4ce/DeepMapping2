@@ -135,7 +135,7 @@ with o3d.utility.VerbosityContextManager(
 print('saving results')
 for i in tqdm(range(n_pc)):
     if i % 2 == 0:
-        transformation = pose_graph.nodes[i].pose.copy()
+        transformation = pose_graph.nodes[i//2].pose.copy()
         R, t = transformation[:3, :3], transformation[:3, 3:]
         pose_est[i, :3] = t[:3].T
         pose_est[i, 3:] = utils.mat2ang_np(R)

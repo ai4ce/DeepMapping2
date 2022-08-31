@@ -15,17 +15,17 @@ from matplotlib import rc
 from tqdm import tqdm
 
 
-def pairwise_registration(source, target, max_correspondence_distance_coarse, max_correspondence_distance_fine):
+def pairwise_registration(src, dst, max_correspondence_distance_coarse, max_correspondence_distance_fine):
     icp_coarse = o3d.pipelines.registration.registration_icp(
-        source, target, max_correspondence_distance_coarse, np.identity(4),
+        src, dst, max_correspondence_distance_coarse, np.identity(4),
         o3d.pipelines.registration.TransformationEstimationPointToPlane())
     icp_fine = o3d.pipelines.registration.registration_icp(
-        source, target, max_correspondence_distance_fine,
+        src, dst, max_correspondence_distance_fine,
         icp_coarse.transformation,
         o3d.pipelines.registration.TransformationEstimationPointToPlane())
     transformation_icp = icp_fine.transformation
     information_icp = o3d.pipelines.registration.get_information_matrix_from_point_clouds(
-        source, target, max_correspondence_distance_fine,
+        src, dst, max_correspondence_distance_fine,
         icp_fine.transformation)
     return transformation_icp, information_icp
 
@@ -66,7 +66,7 @@ if dataset == "KITTI":
         pcds.append(pcd)
 elif dataset == "NCLT":
     for i in tqdm(range(len(pcd_files))):
-    # for i in tqdm(range(10000)):
+    # for i in tqdm(range(10)):
         pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[i]))
         points = np.asarray(pcd.points)
         pcd = pcd.select_by_index(np.where(np.linalg.norm(points, axis=1) < 100)[0])
@@ -81,34 +81,36 @@ pose_graph = o3d.pipelines.registration.PoseGraph()
 odometry = np.identity(4)
 pose_graph.nodes.append(o3d.pipelines.registration.PoseGraphNode(odometry))
 # n_pc=10000
-for source_id in tqdm(range(0, n_pc-1, 2)):
+# for source_id in tqdm(range(0, n_pc-1, 2)):
+for source_id in tqdm(range(n_pc-1)):
     transformation_icp, information_icp = pairwise_registration(
-            pcds[source_id], pcds[source_id+2], 1, 0.5)
+            pcds[source_id], pcds[source_id+1], 1.25, 0.5)
     # transformation_icp, information_icp = np.identity(4), np.identity(6)
     odometry = np.dot(transformation_icp, odometry)
     pose_graph.nodes.append(
         o3d.pipelines.registration.PoseGraphNode(
             np.linalg.inv(odometry)))
     pose_graph.edges.append(
-        o3d.pipelines.registration.PoseGraphEdge(source_id // 2,
-                                                    source_id // 2+1,
+        o3d.pipelines.registration.PoseGraphEdge(source_id,
+                                                    source_id+1,
                                                     transformation_icp,
                                                     information_icp,
                                                     uncertain=False))
-    for target_id in group_matrix[source_id]:
-        if target_id == source_id + 2 or target_id == source_id:
+    for index, target_id in enumerate(group_matrix[source_id]):
+        if target_id == source_id + 1 or target_id == source_id:
             continue
-        if target_id % 2 != 0:
-            continue
+        # if target_id % 2 != 0:
+        #     continue
         transformation_icp, information_icp = pairwise_registration(
-            pcds[source_id], pcds[target_id], 1, 0.5)
+            pcds[source_id], pcds[target_id], 1.25, 0.5)
         # transformation_icp, information_icp = np.identity(4), np.identity(6)
         pose_graph.edges.append(
-        o3d.pipelines.registration.PoseGraphEdge(source_id // 2,
-                                                    target_id // 2,
+        o3d.pipelines.registration.PoseGraphEdge(source_id,
+                                                    target_id,
                                                     transformation_icp,
                                                     information_icp,
                                                     uncertain=True))
+
 # icp_pose = np.load("/mnt/NAS/home/xinhao/deepmapping/main/results/NCLT/NCLT_0108_icp/pose_est_icp.npy")
 # pairwise_pose = np.load("/mnt/NAS/home/xinhao/deepmapping/main/results/NCLT/NCLT_0108_icp/pose_pairwise.npy")
 # for source_id in tqdm(range(n_pc-1)):
@@ -134,21 +136,25 @@ with o3d.utility.VerbosityContextManager(
 
 print('saving results')
 for i in tqdm(range(n_pc)):
-    if i % 2 == 0:
-        transformation = pose_graph.nodes[i//2].pose.copy()
-        R, t = transformation[:3, :3], transformation[:3, 3:]
-        pose_est[i, :3] = t[:3].T
-        pose_est[i, 3:] = utils.mat2ang_np(R)
-    else:
-        try:
-            transformation_icp, _ = pairwise_registration(
-                pcds[i-1], pcds[i], 1, 0.5)
-            transformation = np.dot(transformation_icp.copy(), pose_graph.nodes[(i-1) // 2].pose.copy())
-            R, t = transformation[:3, :3], transformation[:3, 3:]
-            pose_est[i, :3] = t[:3].T
-            pose_est[i, 3:] = utils.mat2ang_np(R)
-        except Exception as e:
-            print(e)
+    # if i % 2 == 0:
+    #     transformation = pose_graph.nodes[i].pose.copy()
+    #     R, t = transformation[:3, :3], transformation[:3, 3:]
+    #     pose_est[i, :3] = t[:3].T
+    #     pose_est[i, 3:] = utils.mat2ang_np(R)
+    # else:
+    #     try:
+    #         transformation_icp, _ = pairwise_registration(
+    #             pcds[i-1], pcds[i], 1, 0.5)
+    #         transformation = np.dot(transformation_icp.copy(), pose_graph.nodes[(i-1) // 2].pose.copy())
+    #         R, t = transformation[:3, :3], transformation[:3, 3:]
+    #         pose_est[i, :3] = t[:3].T
+    #         pose_est[i, 3:] = utils.mat2ang_np(R)
+    #     except Exception as e:
+    #         print(e)
+    transformation = pose_graph.nodes[i].pose.copy()
+    R, t = transformation[:3, :3], transformation[:3, 3:]
+    pose_est[i, :3] = t[:3].T
+    pose_est[i, 3:] = utils.mat2ang_np(R)
 save_name = os.path.join(checkpoint_dir,'pose_est_icp.npy')
 np.save(save_name,pose_est)
 

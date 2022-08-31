@@ -92,3 +92,13 @@ def plot_curve(data, title, checkpoint_dir):
     plt.title(title)
     plt.savefig(os.path.join(checkpoint_dir, title+".png"))
     plt.close()
+
+def plot_loss(loss, bce, ch, eu, title, checkpoint_dir):
+    plt.plot(np.arange(1, len(loss)+1), loss, label="Weighted loss")
+    plt.plot(np.arange(1, len(bce)+1), bce, label="BCE loss")
+    plt.plot(np.arange(1, len(ch)+1), ch, label="Chamfer loss")
+    plt.plot(np.arange(1, len(eu)+1), eu, label="Consistency loss")
+    plt.title(title)
+    plt.legend()
+    plt.savefig(os.path.join(checkpoint_dir, title+".png"))
+    plt.close()

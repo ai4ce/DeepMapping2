@@ -100,10 +100,14 @@ else:
 print('start training')
 best_loss = 20
 training_losses = []
+bce_losses, ch_losses, eu_losses = [], [], []
 trans_ates = []
 rot_ates = []
 for epoch in range(starting_epoch, opt.n_epochs):
-    training_loss= 0.0
+    training_loss = 0
+    bce_loss = 0
+    ch_loss = 0
+    eu_loss = 0
     model.train()
 
     time_start = time.time()
@@ -112,18 +116,27 @@ for epoch in range(starting_epoch, opt.n_epochs):
         valid_pt = valid_pt.to(device)
         init_global_pose = init_global_pose.to(device)
         pairwise_pose = pairwise_pose.to(device)
-        loss = model(obs, init_global_pose, valid_pt, pairwise_pose)
+        loss, bce, ch, eu = model(obs, init_global_pose, valid_pt, pairwise_pose)
 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
         training_loss += loss.item()
+        bce_loss += bce
+        ch_loss += ch
+        eu_loss += eu
     
     time_end = time.time()
     print("Training time: {:.2f}s".format(time_end - time_start))
     training_loss_epoch = training_loss/len(train_loader)
+    bce_epoch = bce_loss / len(train_loader)
+    ch_epoch = ch_loss / len(train_loader)
+    eu_epoch = eu_loss / len(train_loader)
     training_losses.append(training_loss_epoch)
+    bce_losses.append(bce_epoch)
+    ch_losses.append(ch_epoch)
+    eu_losses.append(eu_epoch)
 
     print('[{}/{}], training loss: {:.4f}'.format(epoch+1,opt.n_epochs,training_loss_epoch))
     obs_global_est_np = []
@@ -154,7 +167,8 @@ for epoch in range(starting_epoch, opt.n_epochs):
     rot_ates.append(rot_ate)
     utils.plot_curve(trans_ates, "translation_ate", checkpoint_dir)
     utils.plot_curve(rot_ates, "rotation_ate", checkpoint_dir)
-    utils.plot_curve(training_losses, "training_loss", checkpoint_dir)
+    # utils.plot_curve(training_losses, "training_loss", checkpoint_dir)
+    utils.plot_loss(training_loss, bce_losses, ch_losses, eu_losses, "training_loss", checkpoint_dir)
 
     if training_loss_epoch < best_loss:
         print("lowest loss:", training_loss_epoch)

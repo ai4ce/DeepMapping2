@@ -168,7 +168,7 @@ for epoch in range(starting_epoch, opt.n_epochs):
     utils.plot_curve(trans_ates, "translation_ate", checkpoint_dir)
     utils.plot_curve(rot_ates, "rotation_ate", checkpoint_dir)
     # utils.plot_curve(training_losses, "training_loss", checkpoint_dir)
-    utils.plot_loss(training_loss, bce_losses, ch_losses, eu_losses, "training_loss", checkpoint_dir)
+    utils.plot_loss(training_losses, bce_losses, ch_losses, eu_losses, "training_loss", checkpoint_dir)
 
     if training_loss_epoch < best_loss:
         print("lowest loss:", training_loss_epoch)

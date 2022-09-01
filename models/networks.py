@@ -42,9 +42,9 @@ class ObsFeatKITTI(nn.Module):
         super(ObsFeatKITTI, self).__init__()
         self.n_out = n_out
         self.conv1 = nn.Conv1d(3, 64, 1)
-        self.conv2 = nn.Conv1d(64, 128, 1)
+        self.conv2 = nn.Conv1d(64, 256, 1)
         self.conv3 = nn.Conv1d(
-            128, self.n_out, 1)
+            256, self.n_out, 1)
         self.mp = nn.MaxPool1d(n_points)
 
     def forward(self, x):

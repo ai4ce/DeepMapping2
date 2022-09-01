@@ -41,7 +41,7 @@ def sample_unoccupied_point(local_point_cloud, n_samples):
 
 class DeepMapping_KITTI(nn.Module):
     #def __init__(self, loss_fn, n_samples=35, dim=[3, 256, 256, 256, 256, 256, 256, 1]):
-    def __init__(self, n_points, loss_fn, n_samples=35, dim=[3, 64, 512, 512, 256, 128, 1], alpha=0.1, beta=0.1):
+    def __init__(self, n_points, loss_fn, n_samples=35, dim=[3, 64, 256, 1024, 1024, 256, 64, 1], alpha=0.1, beta=0.1):
         super(DeepMapping_KITTI, self).__init__()
         self.n_samples = n_samples
         self.loss_fn = loss_fn

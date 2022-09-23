@@ -1,27 +1,21 @@
 import set_path
 import os
-import pickle
-import colorsys
 import argparse
-import functools
-# print = functools.partial(print,flush=True)
-import torch
 import numpy as np
 
 import utils
 import open3d as o3d
-from dataset_loader import Kitti
 from matplotlib import rc
 from tqdm import tqdm
 
 
-def pairwise_registration(src, dst, max_correspondence_distance_coarse, max_correspondence_distance_fine):
-    icp_coarse = o3d.pipelines.registration.registration_icp(
-        src, dst, max_correspondence_distance_coarse, np.identity(4),
-        o3d.pipelines.registration.TransformationEstimationPointToPlane())
+def pairwise_registration(src, dst, max_correspondence_distance_coarse, max_correspondence_distance_fine, init_pose):
+    # icp_coarse = o3d.pipelines.registration.registration_icp(
+    #     src, dst, max_correspondence_distance_coarse, np.identity(4),
+    #     o3d.pipelines.registration.TransformationEstimationPointToPlane())
     icp_fine = o3d.pipelines.registration.registration_icp(
         src, dst, max_correspondence_distance_fine,
-        icp_coarse.transformation,
+        init_pose,
         o3d.pipelines.registration.TransformationEstimationPointToPlane())
     transformation_icp = icp_fine.transformation
     information_icp = o3d.pipelines.registration.get_information_matrix_from_point_clouds(
@@ -40,7 +34,6 @@ parser.add_argument('--group_size',type=int,default=4,help='size of group')
 parser.add_argument('--mode',type=str,default="icp",help='local or global frame registraion')
 opt = parser.parse_args()
 rc('image', cmap='rainbow_r')
-print("group_size=", opt.group_size)
 
 dataset = opt.data_dir.split("/")[-1]
 if opt.data_dir == "/":
@@ -57,15 +50,15 @@ while pcd_files[-1][-3:] != "pcd":
     pcd_files.pop()
 n_pc = len(pcd_files)
 group_matrix = np.load(os.path.join(dataset_dir, "group_matrix.npy"))[:, :opt.group_size]
-pcd_files = np.asarray(pcd_files)
+# pcd_files = np.asarray(pcd_files)
 pcds = []
 if dataset == "KITTI":
-    for i in tqdm(range(len(pcd_files))):
+    for i in tqdm(range(n_pc)):
         pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[i])).voxel_down_sample(opt.voxel_size)
         pcd.estimate_normals()
         pcds.append(pcd)
 elif dataset == "NCLT":
-    for i in tqdm(range(len(pcd_files))):
+    for i in tqdm(range(n_pc)):
     # for i in tqdm(range(10)):
         pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[i]))
         points = np.asarray(pcd.points)
@@ -73,85 +66,85 @@ elif dataset == "NCLT":
         pcd = pcd.voxel_down_sample(opt.voxel_size)
         pcd.estimate_normals()
         pcds.append(pcd)
-pose_est = np.zeros((n_pc, 6),dtype=np.float32)
-print('running icp')
+num_seg = 100 # Number of segments in multiway regiatration
+K = n_pc // num_seg # Number of frames in a segment
 
-# # dataset.group_flag = False
+print('running initial icp')
+trans_cums = [np.eye(4)]
+segments = []
+for idx in tqdm(range(n_pc-1)):
+    src, dst = pcds[idx], pcds[idx+1]
+    trans_cur = utils.icp_o3d(src, dst, 0.5, "matrix")
+    if idx == 0: 
+        trans_cum = trans_cur
+    else:
+        trans_cum = trans_cur @ trans_cum
+    trans_cums.append(np.linalg.inv(trans_cum))
+        
+    if idx % K == K - 2:
+        cur_segment = o3d.geometry.PointCloud()
+        for sub_idx in range(idx-K+2, idx+1):
+            cur_segment += pcds[sub_idx].transform(trans_cums[sub_idx])
+            cur_segment = cur_segment.voxel_down_sample(opt.voxel_size)
+            cur_segment = cur_segment.voxel_down_sample(1)
+            cur_segment.estimate_normals()
+        cur_segment.transform(np.linalg.inv(trans_cums[idx-K+2]))
+        segments.append(cur_segment)
+    # if len(segments) == 10:
+    #     o3d.io.write_point_cloud("segment1.pcd", segments[8])
+    #     o3d.io.write_point_cloud("segment2.pcd", segments[9])
+    #     np.save("transform1.npy", trans_cums[8*K])
+    #     np.save("transform2.npy", trans_cums[9*K])
+    #     print(K, len(trans_cums))
+    #     assert()
+print("Number of segments:", len(segments))
+print("running pairwise registration on segements")
 pose_graph = o3d.pipelines.registration.PoseGraph()
 odometry = np.identity(4)
 pose_graph.nodes.append(o3d.pipelines.registration.PoseGraphNode(odometry))
-# n_pc=10000
-# for source_id in tqdm(range(0, n_pc-1, 2)):
-for source_id in tqdm(range(n_pc-1)):
-    transformation_icp, information_icp = pairwise_registration(
-            pcds[source_id], pcds[source_id+1], 1.25, 0.5)
-    # transformation_icp, information_icp = np.identity(4), np.identity(6)
-    odometry = np.dot(transformation_icp, odometry)
-    pose_graph.nodes.append(
-        o3d.pipelines.registration.PoseGraphNode(
-            np.linalg.inv(odometry)))
-    pose_graph.edges.append(
-        o3d.pipelines.registration.PoseGraphEdge(source_id,
-                                                    source_id+1,
-                                                    transformation_icp,
-                                                    information_icp,
-                                                    uncertain=False))
-    for index, target_id in enumerate(group_matrix[source_id]):
-        if target_id == source_id + 1 or target_id == source_id:
-            continue
-        # if target_id % 2 != 0:
-        #     continue
+for source_id in tqdm(range(len(segments))):
+    for target_id in range(source_id + 1, len(segments)):
+        relative_pose = np.linalg.inv(trans_cums[source_id*K]) @ trans_cums[target_id*K]
         transformation_icp, information_icp = pairwise_registration(
-            pcds[source_id], pcds[target_id], 1.25, 0.5)
-        # transformation_icp, information_icp = np.identity(4), np.identity(6)
-        pose_graph.edges.append(
-        o3d.pipelines.registration.PoseGraphEdge(source_id,
-                                                    target_id,
-                                                    transformation_icp,
-                                                    information_icp,
-                                                    uncertain=True))
-
-# icp_pose = np.load("/mnt/NAS/home/xinhao/deepmapping/main/results/NCLT/NCLT_0108_icp/pose_est_icp.npy")
-# pairwise_pose = np.load("/mnt/NAS/home/xinhao/deepmapping/main/results/NCLT/NCLT_0108_icp/pose_pairwise.npy")
-# for source_id in tqdm(range(n_pc-1)):
-#     pose_graph.edges.append(
-#         o3d.pipelines.registration.PoseGraphEdge(source_id,
-#                                                     source_id+1,
-#                                                     transformation_icp,
-#                                                     information_icp,
-#                                                     uncertain=False))
+                segments[source_id], segments[target_id], 80, opt.voxel_size, np.linalg.inv(relative_pose))
+        if target_id == source_id + 1:  # odometry case
+            odometry = transformation_icp @ odometry
+            pose_graph.nodes.append(
+                o3d.pipelines.registration.PoseGraphNode(np.linalg.inv(odometry))
+            )
+            pose_graph.edges.append(
+                o3d.pipelines.registration.PoseGraphEdge(source_id,
+                                                            target_id,
+                                                            transformation_icp,
+                                                            information_icp,
+                                                            uncertain=False))
+        else:  # loop closure case
+            pose_graph.edges.append(
+                o3d.pipelines.registration.PoseGraphEdge(source_id,
+                                                            target_id,
+                                                            transformation_icp,
+                                                            information_icp,
+                                                            uncertain=True))
 
 print("Optimizing PoseGraph ...")
 option = o3d.pipelines.registration.GlobalOptimizationOption(
-    max_correspondence_distance=0.5,
+    max_correspondence_distance=opt.voxel_size,
     edge_prune_threshold=0.25,
     reference_node=0)
-with o3d.utility.VerbosityContextManager(
-        o3d.utility.VerbosityLevel.Debug) as cm:
+with o3d.utility.VerbosityContextManager(o3d.utility.VerbosityLevel.Debug) as cm:
     o3d.pipelines.registration.global_optimization(
         pose_graph,
         o3d.pipelines.registration.GlobalOptimizationLevenbergMarquardt(),
         o3d.pipelines.registration.GlobalOptimizationConvergenceCriteria(),
-        option)
+        option
+    )
 
 print('saving results')
-for i in tqdm(range(n_pc)):
-    # if i % 2 == 0:
-    #     transformation = pose_graph.nodes[i].pose.copy()
-    #     R, t = transformation[:3, :3], transformation[:3, 3:]
-    #     pose_est[i, :3] = t[:3].T
-    #     pose_est[i, 3:] = utils.mat2ang_np(R)
-    # else:
-    #     try:
-    #         transformation_icp, _ = pairwise_registration(
-    #             pcds[i-1], pcds[i], 1, 0.5)
-    #         transformation = np.dot(transformation_icp.copy(), pose_graph.nodes[(i-1) // 2].pose.copy())
-    #         R, t = transformation[:3, :3], transformation[:3, 3:]
-    #         pose_est[i, :3] = t[:3].T
-    #         pose_est[i, 3:] = utils.mat2ang_np(R)
-    #     except Exception as e:
-    #         print(e)
-    transformation = pose_graph.nodes[i].pose.copy()
+pose_est = np.zeros((len(segments * K), 6))
+for i in tqdm(range(len(segments * K))):
+    trans_cur = pose_graph.nodes[i // K].pose.copy()
+    trans_cum =  np.linalg.inv(trans_cums[i//K*K]) @ trans_cums[i]
+    transformation = trans_cur @ trans_cum
     R, t = transformation[:3, :3], transformation[:3, 3:]
     pose_est[i, :3] = t[:3].T
     pose_est[i, 3:] = utils.mat2ang_np(R)
@@ -171,32 +164,7 @@ if dataset == "KITTI":
     gt_pose[:, 0] -= gt_pose[0, 0]
     # gt_pose = gt_pose[:, [1, 0, 2, 5]]
     gt_pose[:, [0, 1]] = gt_pose[:, [1, 0]]
+gt_pose = gt_pose[:pose_est.shape[0]]
 trans_ate, rot_ate = utils.compute_ate(pose_est, gt_pose) 
 print('{}, translation ate: {}'.format(opt.name,trans_ate))
 print('{}, rotation ate: {}'.format(opt.name,rot_ate))
-
-# print("Running pairwise registraion")
-# pose_est = np.zeros((n_pc, opt.group_size-1, 6),dtype=np.float32)
-# for idx in tqdm(range(n_pc)):
-#     src_pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[group_matrix[idx, 0]]))
-#     points = np.asarray(src_pcd.points)
-#     src_pcd = src_pcd.select_by_index(np.where(np.linalg.norm(points, axis=1) < 100)[0])
-#     src_pcd = src_pcd.voxel_down_sample(opt.voxel_size)
-#     src_pcd.estimate_normals()
-#     for group_idx in range(1, opt.group_size):
-#         if opt.mode == "icp":
-#             # src = pcds[group_matrix[idx, 0]]
-#             # dst = pcds[group_matrix[idx, group_idx]]
-#             dst_pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[group_matrix[idx, group_idx]]))
-#             points = np.asarray(dst_pcd.points)
-#             dst_pcd = dst_pcd.select_by_index(np.where(np.linalg.norm(points, axis=1) < 100)[0])
-#             dst_pcd = dst_pcd.voxel_down_sample(opt.voxel_size)
-#             dst_pcd.estimate_normals()
-#             R, t = utils.icp_o3d(src_pcd, dst_pcd, 0.5)
-#             pose_est[idx, group_idx-1, :3] = t[:3].T
-#             pose_est[idx, group_idx-1, 3:] = utils.mat2ang_np(R)
-#         elif opt.mode == "gt":
-#             pose_est[idx, group_idx-1] = gt_pose[group_matrix[idx, 0]] - gt_pose[group_matrix[idx, group_idx]]
-
-# save_name = os.path.join(checkpoint_dir,'pose_pairwise.npy')
-# np.save(save_name,pose_est)

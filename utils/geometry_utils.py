@@ -83,7 +83,7 @@ def rigid_transform_kD(A, B):
     return R, t
 
 
-def icp_o3d(src, dst, voxel_size=0.5):
+def icp_o3d(src, dst, voxel_size=0.5, return_type="Rt"):
     '''
     Don't support init_pose and only supports 3dof now.
     Args:
@@ -112,9 +112,12 @@ def icp_o3d(src, dst, voxel_size=0.5):
     )
 
     transformation = registration.transformation
-    R = transformation[:3, :3]
-    t = transformation[:3, 3:]
-    return R.copy(), t.copy()
+    if return_type == "Rt":
+        R = transformation[:3, :3]
+        t = transformation[:3, 3:]
+        return R.copy(), t.copy()
+    else:
+        return transformation.copy()
 
 
 def compute_ate(output,target):

@@ -1,24 +1,20 @@
-import set_path
 import os
 import colorsys
-import argparse
-import functools
-import torch
 
 import numpy as np
 import open3d as o3d
 
-from dataset_loader import Kitti
 from tqdm import tqdm
-import utils
-import pickle
+import sys
+sys.path.append("../")
+from utils import plot_global_pose
 
 
-data_dir = "../data/kitti"
-traj = "2011_10_03_drive_0027_sync"
+data_dir = "../data/NCLT"
+traj = "2012-01-08-down2"
 dataset_dir = os.path.join(data_dir, traj)
-checkpoint_dir = '../results/KITTI/gt_vis'
-voxel_size = 1
+checkpoint_dir = '../results/NCLT/gt_vis'
+voxel_size = 5
 pcd_files = sorted(os.listdir(os.path.join(data_dir, traj)))
 while pcd_files[-1][-3:] != "pcd":
     pcd_files.pop()
@@ -27,14 +23,18 @@ while pcd_files[-1][-3:] != "pcd":
 # load ground truth poses
 # dataset = Kitti(data_dir, traj, voxel_size)
 gt_pose = np.load(os.path.join(data_dir, traj, "gt_pose.npy"))
-radius = 6378137 # earth radius
-gt_pose[:, :2] *= np.pi / 180
-lat_0 = gt_pose[0, 0]
-gt_pose[:, 1] *= radius * np.cos(lat_0)
-gt_pose[:, 0] *= radius
-# gt_pose[:, 1] -= gt_pose[0, 1]
-# gt_pose[:, 0] -= gt_pose[0, 0]
-gt_pose[:, [0, 1]] = gt_pose[:, [1, 0]]
+gt_pose = gt_pose
+# radius = 6378137 # earth radius
+# gt_pose[:, :2] *= np.pi / 180
+# lat_0 = gt_pose[0, 0]
+# gt_pose[:, 1] *= radius * np.cos(lat_0)
+# gt_pose[:, 0] *= radius
+# # gt_pose[:, 1] -= gt_pose[0, 1]
+# # gt_pose[:, 0] -= gt_pose[0, 0]
+# gt_pose[:, [0, 1]] = gt_pose[:, [1, 0]]
+# pcd_files = pcd_files[:500]
+# gt_pose = gt_pose[:1000]
+np.save(os.path.join(checkpoint_dir, "gt_pose.npy"), gt_pose)
 
 # color in visulization
 colors = []
@@ -44,9 +44,13 @@ for i in range(gt_pose.shape[0]):
 color_palette = np.expand_dims(np.array(colors), 1)
 
 gt_global_list = [None] * gt_pose.shape[0]
-# gt_global = o3d.geometry.PointCloud()
+plot_global_pose(checkpoint_dir, dataset="NCLT", mode="gt")
+# assert()
+gt_global = o3d.geometry.PointCloud()
 for i in tqdm(range(gt_pose.shape[0])):
     pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[i]))
+    points = np.asarray(pcd.points)
+    pcd = pcd.select_by_index(np.where(np.linalg.norm(points, axis=1) < 100)[0])
     pcd = pcd.voxel_down_sample(voxel_size)
     # rotation = o3d.geometry.get_rotation_matrix_from_xyz(gt_pose[i:i+1, 3:].T)
     # pcd.rotate(rotation)
@@ -55,8 +59,8 @@ for i in tqdm(range(gt_pose.shape[0])):
     T[:3, :3] = o3d.geometry.get_rotation_matrix_from_xyz(gt_pose[i, 3:])
     T[:3, 3] = gt_pose[i, :3]
     pcd.transform(T)
-    pcd.paint_uniform_color(color_palette[i].T)
-    # gt_global  = gt_global + pcd
+    # pcd.paint_uniform_color(color_palette[i].T)
+    gt_global  = gt_global + pcd
     gt_global_list[i] = np.asarray(pcd.points)
 
 # vis gt

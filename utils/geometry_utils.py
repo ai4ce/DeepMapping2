@@ -3,7 +3,7 @@ import numpy as np
 import open3d as o3d
 from open3d import pipelines
 from sklearn.neighbors import NearestNeighbors
-from scipy.spatial.transform import Rotation as R
+from scipy.spatial.transform import Rotation as Rot
 from .pytorch3d_utils import *
 import sys
 
@@ -135,7 +135,8 @@ def compute_ate(output,target):
     R, t = rigid_transform_kD(output_location,target_location)
     location_aligned = np.matmul(R , output_location.T) + t
     location_aligned = location_aligned.T
-    yaw_aligned = np.arctan2(R[1,0],R[0,0]) + output[:, -1]
+    rotation = Rot.from_matrix(R).as_euler("XYZ")
+    yaw_aligned = output[:, 3:] + rotation
     while np.any(yaw_aligned > np.pi):
         yaw_aligned[yaw_aligned > np.pi] = yaw_aligned[yaw_aligned > np.pi] - 2 * np.pi
     while np.any(yaw_aligned < -np.pi):
@@ -163,10 +164,10 @@ def remove_invalid_pcd(pcd):
 
 
 def mat2ang_np(mat):
-    r = R.from_matrix(mat)
+    r = Rot.from_matrix(mat)
     return r.as_euler("XYZ", degrees=False)
 
 
 def ang2mat_np(ang):
-    r = R.from_euler("XYZ", ang)
+    r = Rot.from_euler("XYZ", ang)
     return r.as_matrix()

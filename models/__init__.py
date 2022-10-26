@@ -1,1 +1,1 @@
-from .deepmapping import DeepMapping_KITTI
+from .deepmapping import DeepMapping2

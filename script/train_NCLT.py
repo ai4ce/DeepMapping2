@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 
 import utils
 import loss
-from models import DeepMapping_KITTI
+from models import DeepMapping2
 from dataset_loader import Nclt, NcltEval
 from tqdm import tqdm
 
@@ -76,7 +76,7 @@ eval_loader = DataLoader(eval_dataset, batch_size=64, num_workers=4)
 loss_fn = eval('loss.'+opt.loss)
 
 print('creating model')
-model = DeepMapping_KITTI(n_points=train_dataset.n_points, loss_fn=loss_fn,
+model = DeepMapping2(n_points=train_dataset.n_points, loss_fn=loss_fn,
     n_samples=opt.n_samples, alpha=opt.alpha, beta=opt.beta).to(device)
 
 if opt.optimizer == "Adam":

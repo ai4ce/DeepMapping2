@@ -39,10 +39,10 @@ def sample_unoccupied_point(local_point_cloud, n_samples):
     return unoccupied
 
 
-class DeepMapping_KITTI(nn.Module):
+class DeepMapping2(nn.Module):
     #def __init__(self, loss_fn, n_samples=35, dim=[3, 256, 256, 256, 256, 256, 256, 1]):
     def __init__(self, n_points, loss_fn, n_samples=35, dim=[3, 64, 256, 1024, 1024, 256, 64, 1], alpha=0.1, beta=0.1):
-        super(DeepMapping_KITTI, self).__init__()
+        super(DeepMapping2, self).__init__()
         self.n_samples = n_samples
         self.loss_fn = loss_fn
         self.n_points = n_points
@@ -100,8 +100,5 @@ class DeepMapping_KITTI(nn.Module):
             loss = self.loss_fn(self.occp_prob, self.gt, bce_weight)  # BCE
         elif self.loss_fn.__name__ == 'bce_ch_eu':
             loss = self.loss_fn(self.occp_prob, self.gt, self.obs_global_est, self.relative_centroid, self.centorid,
-                                self.valid_points, bce_weight, seq=2, alpha=self.alpha, beta=self.beta)
-        elif self.loss_fn.__name__ == 'bce_ch_eu_rg':
-            loss = self.loss_fn(self.occp_prob, self.gt, self.obs_global_est, self.relative_centroid, self.centorid, self.l_net_out, 
                                 self.valid_points, bce_weight, seq=2, alpha=self.alpha, beta=self.beta)
         return loss

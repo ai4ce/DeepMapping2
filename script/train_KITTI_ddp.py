@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 
 import utils
 import loss
-from models import DeepMapping_KITTI
+from models import DeepMapping2
 from dataset_loader import Kitti, KittiEval
 from tqdm import tqdm
 from time import sleep
@@ -70,7 +70,7 @@ def ddp_func(rank, world_size, opt):
     loss_fn = eval('loss.'+opt.loss)
     if rank == 0:
         print('creating model')
-    model = DeepMapping_KITTI(n_points=train_dataset.n_points, loss_fn=loss_fn,
+    model = DeepMapping2(n_points=train_dataset.n_points, loss_fn=loss_fn,
         n_samples=opt.n_samples, alpha=opt.alpha, beta=opt.beta).to(rank)
     ddp_model = DDP(model, device_ids=[rank])
 

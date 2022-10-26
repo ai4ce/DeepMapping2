@@ -87,6 +87,8 @@ else:
     print("Unsupported optimizer")
     assert()
 
+scaler = torch.cuda.amp.GradScaler()
+
 if opt.model is not None:
     utils.load_checkpoint(opt.model,model,optimizer)
 
@@ -120,8 +122,11 @@ for epoch in range(starting_epoch, opt.n_epochs):
             loss, bce, ch, eu = model(obs, init_global_pose, valid_pt, pairwise_pose)
 
         optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
+        # loss.backward()
+        # optimizer.step()
 
         training_loss += loss.item()
         bce_loss += bce

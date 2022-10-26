@@ -10,10 +10,10 @@ sys.path.append("../")
 from utils import plot_global_pose
 
 
-data_dir = "../data/NCLT"
-traj = "2012-01-08-down2"
+data_dir = "../data/KITTI"
+traj = "2011_09_30_drive_0018_sync_tfvpr"
 dataset_dir = os.path.join(data_dir, traj)
-checkpoint_dir = '../results/NCLT/gt_vis'
+checkpoint_dir = '../results/KITTI/gt_vis'
 voxel_size = 5
 pcd_files = sorted(os.listdir(os.path.join(data_dir, traj)))
 while pcd_files[-1][-3:] != "pcd":
@@ -24,14 +24,14 @@ while pcd_files[-1][-3:] != "pcd":
 # dataset = Kitti(data_dir, traj, voxel_size)
 gt_pose = np.load(os.path.join(data_dir, traj, "gt_pose.npy"))
 gt_pose = gt_pose
-# radius = 6378137 # earth radius
-# gt_pose[:, :2] *= np.pi / 180
-# lat_0 = gt_pose[0, 0]
-# gt_pose[:, 1] *= radius * np.cos(lat_0)
-# gt_pose[:, 0] *= radius
-# # gt_pose[:, 1] -= gt_pose[0, 1]
-# # gt_pose[:, 0] -= gt_pose[0, 0]
-# gt_pose[:, [0, 1]] = gt_pose[:, [1, 0]]
+radius = 6378137 # earth radius
+gt_pose[:, :2] *= np.pi / 180
+lat_0 = gt_pose[0, 0]
+gt_pose[:, 1] *= radius * np.cos(lat_0)
+gt_pose[:, 0] *= radius
+gt_pose[:, 1] -= gt_pose[0, 1]
+gt_pose[:, 0] -= gt_pose[0, 0]
+gt_pose[:, [0, 1]] = gt_pose[:, [1, 0]]
 # pcd_files = pcd_files[:500]
 # gt_pose = gt_pose[:1000]
 np.save(os.path.join(checkpoint_dir, "gt_pose.npy"), gt_pose)
@@ -44,7 +44,7 @@ for i in range(gt_pose.shape[0]):
 color_palette = np.expand_dims(np.array(colors), 1)
 
 gt_global_list = [None] * gt_pose.shape[0]
-plot_global_pose(checkpoint_dir, dataset="NCLT", mode="gt")
+plot_global_pose(checkpoint_dir, dataset="KITTI", mode="gt")
 # assert()
 gt_global = o3d.geometry.PointCloud()
 for i in tqdm(range(gt_pose.shape[0])):

@@ -3,9 +3,9 @@
 # path to dataset
 DATA_DIR=../data/kitti
 # trajectiory file name
-TRAJ=2011_09_30_drive_0018_sync_tfvpr
+TRAJ=2011_10_03_drive_0027_sync
 # experiment name, the results will be saved to ../results/2D/${NAME}
-NAME=KITTI_0018_ddp
+NAME=KITTI_0027
 # training epochs
 EPOCH=100
 # batch size
@@ -23,7 +23,7 @@ VOXEL=1
 # group
 GROUP=1
 # goupr size
-G_SIZE=4
+G_SIZE=8
 # learning rate
 LR=0.0001
 # chamfer loss weight

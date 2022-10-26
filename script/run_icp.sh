@@ -3,9 +3,9 @@
 # path to dataset
 DATA_DIR=../data/kitti
 # trajectiory file name
-TRAJ=2011_09_30_drive_0018_sync_raw
+TRAJ=2011_10_03_drive_0027_sync
 # experiment name, the results will be saved to ../results/2D/${NAME}
-NAME=KITTI_0018_pooer
+NAME=KITTI_0028_icp
 # subsample rate
 VOXEL=1
 # Error metrics for ICP

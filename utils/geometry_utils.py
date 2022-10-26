@@ -136,7 +136,7 @@ def compute_ate(output,target):
     location_aligned = np.matmul(R , output_location.T) + t
     location_aligned = location_aligned.T
     rotation = Rot.from_matrix(R).as_euler("XYZ")
-    yaw_aligned = output[:, 3:] + rotation
+    yaw_aligned = output[:, -1] + rotation[-1]
     while np.any(yaw_aligned > np.pi):
         yaw_aligned[yaw_aligned > np.pi] = yaw_aligned[yaw_aligned > np.pi] - 2 * np.pi
     while np.any(yaw_aligned < -np.pi):

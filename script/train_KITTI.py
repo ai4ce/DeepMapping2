@@ -150,7 +150,7 @@ for epoch in range(starting_epoch, opt.n_epochs):
     save_name = os.path.join(checkpoint_dir, "pose_ests", str(epoch+1))
     np.save(save_name,pose_est_np)
 
-    utils.plot_global_pose(checkpoint_dir, epoch+1)
+    utils.plot_global_pose(checkpoint_dir, "KITTI", epoch+1)
 
     trans_ate, rot_ate = utils.compute_ate(pose_est_np, train_dataset.gt_pose)
     print("Translation ATE:", trans_ate)

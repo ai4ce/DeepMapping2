@@ -143,10 +143,10 @@ def compute_ate(output,target):
         yaw_aligned[yaw_aligned < np.pi] = yaw_aligned[yaw_aligned < np.pi] + 2 * np.pi
 
     trans_error = np.linalg.norm(location_aligned - target_location, axis=1)
-    rot_error = np.linalg.norm(yaw_aligned - target[:, -1])
+    rot_error = np.abs(yaw_aligned - target[:, -1])
     
     trans_ate = np.sqrt(np.mean(trans_error))
-    rot_ate = np.sqrt(np.mean(rot_error))
+    rot_ate = np.mean(rot_error)
 
     return trans_ate, rot_ate
 

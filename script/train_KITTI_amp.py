@@ -121,10 +121,12 @@ for epoch in range(starting_epoch, opt.n_epochs):
         with torch.autocast("cuda"):
             loss, bce, ch, eu = model(obs, init_global_pose, valid_pt, pairwise_pose)
 
-        optimizer.zero_grad()
         scaler.scale(loss).backward()
+        scaler.unscale_(optimizer)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.05)
         scaler.step(optimizer)
         scaler.update()
+        optimizer.zero_grad(set_to_none=True)
         # loss.backward()
         # optimizer.step()
 

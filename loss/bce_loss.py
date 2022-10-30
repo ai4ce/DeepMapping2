@@ -25,7 +25,7 @@ def bce_with_logits(input, target, weight=None, reduction='elementwise_mean'):
             raise ValueError("Weight size ({}) must be the same as input size ({})".format(
                 weight.size(), input.size()))
 
-    max_val = (-input).clamp(min=0)
+    max_val = (-input).clamp(min=1e-4)
     loss = input - input * target + max_val + \
         ((-max_val).exp() + (-input - max_val).exp()).log()
 

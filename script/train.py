@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 import utils
 import loss
 from models import DeepMapping2
-from dataset_loader import Kitti, KittiEval
+from dataset_loader import *
 from tqdm import tqdm
 
 torch.backends.cudnn.deterministic = True
@@ -26,12 +26,13 @@ parser.add_argument('-l','--loss',type=str,default='bce_ch',help='loss function'
 parser.add_argument('-n','--n_samples',type=int,default=35,help='number of sampled unoccupied points along rays')
 parser.add_argument('-v','--voxel_size',type=float,default=1,help='size of downsampling voxel grid')
 parser.add_argument('--lr',type=float,default=1e-4,help='learning rate')
+parser.add_argument('--dataset', type=str, default="KITTI", help="Type of dataset to use")
 parser.add_argument('-d','--data_dir',type=str,default='../data/ActiveVisionDataset/',help='dataset path')
 parser.add_argument('-t','--traj',type=str,default='2011_09_30_drive_0018_sync_full',help='trajectory file folder')
 parser.add_argument('-m','--model', type=str, default=None,help='pretrained model name')
 parser.add_argument('-i','--init', type=str, default=None,help='init pose')
 parser.add_argument('--log_interval',type=int,default=10,help='logging interval of saving results')
-parser.add_argument('-g', '--group', type=int, default=0, help='whether to group frames')
+parser.add_argument('-g', '--group', default=False, action='store_true', help='whether to group frames')
 parser.add_argument('--group_size',type=int,default=8,help='group size')
 parser.add_argument('--pairwise', action='store_true',
                     help='If present, use global consistency loss')
@@ -40,10 +41,11 @@ parser.add_argument('--resume', action='store_true',
 parser.add_argument('--alpha', type=float, default=0.1, help='weight for chamfer loss')
 parser.add_argument('--beta', type=float, default=0.1, help='weight for euclidean loss')
 parser.add_argument('--optimizer', type=str, default="Adam", help="The optimizer to use")
+parser.add_argument('--amp', default=False, action='store_true', help="Toggle auto mixed precision")
 
 opt = parser.parse_args()
 
-checkpoint_dir = os.path.join('../results/KITTI',opt.name)
+checkpoint_dir = os.path.join('../results/'+opt.dataset,opt.name)
 if not os.path.exists(checkpoint_dir):
     os.makedirs(checkpoint_dir)
 if not os.path.exists(os.path.join(checkpoint_dir, "pose_ests")):
@@ -68,10 +70,17 @@ else:
     pairwise_pose = None
 
 print('loading dataset')
-train_dataset = Kitti(opt.data_dir, opt.traj, opt.voxel_size, init_pose=init_pose, 
+if opt.dataset == "KITTI":
+    train_dataset = Kitti(opt.data_dir, opt.traj, opt.voxel_size, init_pose=init_pose, 
+            group=opt.group, group_size=opt.group_size, pairwise=opt.pairwise, pairwise_pose=pairwise_pose)
+    eval_dataset = KittiEval(train_dataset)
+elif opt.dataset == "NCLT":
+    train_dataset = Nclt(opt.data_dir, opt.traj, opt.voxel_size, init_pose=init_pose, 
         group=opt.group, group_size=opt.group_size, pairwise=opt.pairwise, pairwise_pose=pairwise_pose)
+    eval_dataset = NcltEval(train_dataset)
+else:
+    assert 0, "Unsupported dataset"
 train_loader = DataLoader(train_dataset, batch_size=None, num_workers=4, shuffle=True)
-eval_dataset = KittiEval(train_dataset)
 eval_loader = DataLoader(eval_dataset, batch_size=64, num_workers=4)
 loss_fn = eval('loss.'+opt.loss)
 
@@ -86,6 +95,8 @@ elif opt.optimizer == "SGD":
 else:
     print("Unsupported optimizer")
     assert()
+
+scaler = torch.cuda.amp.GradScaler()
 
 if opt.model is not None:
     utils.load_checkpoint(opt.model,model,optimizer)
@@ -116,11 +127,20 @@ for epoch in range(starting_epoch, opt.n_epochs):
         valid_pt = valid_pt.to(device)
         init_global_pose = init_global_pose.to(device)
         pairwise_pose = pairwise_pose.to(device)
-        loss, bce, ch, eu = model(obs, init_global_pose, valid_pt, pairwise_pose)
-
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+        if opt.amp:
+            with torch.autocast("cuda"):
+                loss, bce, ch, eu = model(obs, init_global_pose, valid_pt, pairwise_pose)
+                scaler.scale(loss).backward()
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.05)
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad(set_to_none=True)
+        else:
+            loss, bce, ch, eu = model(obs, init_global_pose, valid_pt, pairwise_pose)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
         training_loss += loss.item()
         bce_loss += bce
@@ -158,7 +178,7 @@ for epoch in range(starting_epoch, opt.n_epochs):
     save_name = os.path.join(checkpoint_dir, "pose_ests", str(epoch+1))
     np.save(save_name,pose_est_np)
 
-    utils.plot_global_pose(checkpoint_dir, "KITTI", epoch+1)
+    utils.plot_global_pose(checkpoint_dir, opt.dataset, epoch+1)
 
     trans_ate, rot_ate = utils.compute_ate(pose_est_np, train_dataset.gt_pose)
     print("Translation ATE:", trans_ate)

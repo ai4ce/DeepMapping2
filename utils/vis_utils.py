@@ -66,6 +66,12 @@ def plot_global_pose(checkpoint_dir, dataset="kitti", epoch=None, mode=None):
         ax.quiver(location[:, 0], location[:, 1], u, v, t, scale=10, scale_units='inches', width=2e-3)
     elif dataset.lower() == "nclt":
         ax.quiver(location[:, 0], location[:, 1], u, v, t, scale=20, scale_units='inches', width=1e-3)
+    elif dataset.lower() == "tandon":
+        u = np.cos(location[:, -1] + np.pi/2) * 2
+        v = np.sin(location[:, -1] + np.pi/2) * 2
+        ax.quiver(location[:, 0], location[:, 1], u, v, t, scale=10, scale_units='inches', width=2e-3)
+    elif dataset.lower() == "nebula":
+        ax.quiver(location[:, 0], location[:, 1], u, v, t, scale=20, scale_units='inches', width=1e-3)
     else:
         assert 0, "Unsupported dataset"
 

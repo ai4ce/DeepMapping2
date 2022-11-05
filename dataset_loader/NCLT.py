@@ -50,7 +50,7 @@ class Nclt(Dataset):
             pcd = pcd.voxel_down_sample(voxel_size)
             pcd = np.asarray(pcd.points)
             point_clouds.append(pcd)
-            if max_points < pcd.shape[0] and pcd.shape[0] <= 6000:
+            if max_points < pcd.shape[0] and pcd.shape[0] <= 10000:
                 max_points = pcd.shape[0]
         for i in range(len(point_clouds)):
             if point_clouds[i].shape[0] < max_points:

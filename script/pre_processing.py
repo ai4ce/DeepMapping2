@@ -38,7 +38,6 @@ pcd_files = sorted(os.listdir(dataset_dir))
 while pcd_files[-1][-3:] != "pcd":
     pcd_files.pop()
 n_pc = len(pcd_files)
-group_matrix = np.load(os.path.join(dataset_dir, "group_matrix.npy"))[:, :opt.group_size]
 pcd_files = np.asarray(pcd_files)
 # pcds = []
 # if dataset == "KITTI":
@@ -78,7 +77,7 @@ for idx in tqdm(range(n_pc-1)):
         src_pcd = src_pcd.select_by_index(np.where(np.linalg.norm(points, axis=1) < 100)[0])
         src_pcd = src_pcd.voxel_down_sample(opt.voxel_size)
         src_pcd.estimate_normals()
-    R0, t0 = utils.icp_o3d(src_pcd, dst_pcd, 0.5)
+    R0, t0 = utils.icp_o3d(src_pcd, dst_pcd, min(opt.voxel_size, 0.5))
     if idx == 0: 
         R_cum = R0
         t_cum = t0
@@ -111,6 +110,7 @@ print('{}, translation ate: {}'.format(opt.name,trans_ate))
 print('{}, rotation ate: {}'.format(opt.name,rot_ate))
 
 print("Running pairwise registraion")
+group_matrix = np.load(os.path.join(dataset_dir, "group_matrix.npy"))[:, :opt.group_size]
 pose_est = np.zeros((n_pc, opt.group_size-1, 6),dtype=np.float32)
 for idx in tqdm(range(n_pc)):
     src_pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[group_matrix[idx, 0]]))

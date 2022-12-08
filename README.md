@@ -1,4 +1,4 @@
-# DeepMappingPP
+# DeepMapping2
 
 On going project of DeepMapping++
 

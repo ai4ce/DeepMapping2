@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# dadtaset type
-DATASET=KITTI
+# # dadtaset type
+# DATASET=KITTI
 # path to dataset
 DATA_DIR=../data/KITTI
 # trajectiory file name
-TRAJ=2011_10_03_drive_0027_sync_tfvpr
+TRAJ=2011_10_03_drive_0027_sync_gtgroup
 # experiment name, the results will be saved to ../results/2D/${NAME}
-NAME=KITTI_0027_test
+NAME=KITTI_0027_gt
 # training epochs
 EPOCH=50
 # loss function
@@ -34,8 +34,8 @@ BETA=0.1
 
 #### warm start
 #### uncomment the following commands to run DeepMapping with a warm start. This requires an initial sensor pose that can be computed using ./script/run_icp.sh
-mkdir /mnt/NAS/home/xinhao/deepmapping/main/results/KITTI/$NAME
-cp ../results/KITTI/KITTI_0027_amp/pose_est_icp.npy ../results/KITTI/$NAME
-cp ../results/KITTI/KITTI_0027_amp/pose_pairwise.npy ../results/KITTI/$NAME
+# mkdir /mnt/NAS/home/xinhao/deepmapping/main/results/KITTI/$NAME
+# cp ../results/KITTI/KITTI_0027_amp/pose_est_icp.npy ../results/KITTI/$NAME
+# cp ../results/KITTI/KITTI_0027_amp/pose_pairwise.npy ../results/KITTI/$NAME
 INIT_POSE=../results/KITTI/$NAME/pose_est_icp.npy
-CUDA_VISIBLE_DEVICES=0 python train_KITTI.py -g --amp --dataset $DATASET --alpha $ALPHA --beta $BETA --pairwise --lr $LR --name $NAME -d $DATA_DIR -t ${TRAJ} -i $INIT_POSE -e $EPOCH -l $LOSS -n $N -v $VOXEL --log_interval $LOG  --group_size $G_SIZE
+CUDA_VISIBLE_DEVICES=2 python train_KITTI.py -g --alpha $ALPHA --beta $BETA --pairwise --lr $LR --name $NAME -d $DATA_DIR -t ${TRAJ} -i $INIT_POSE -e $EPOCH -l $LOSS -n $N -v $VOXEL --log_interval $LOG  --group_size $G_SIZE

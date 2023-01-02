@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 import utils
 import loss
 from models import DeepMapping2
-from dataset_loader import Kitti, KittiEval
+from dataset_loader import Nclt, NcltEval
 from tqdm import tqdm
 
 torch.backends.cudnn.deterministic = True
@@ -43,7 +43,7 @@ parser.add_argument('--optimizer', type=str, default="Adam", help="The optimizer
 
 opt = parser.parse_args()
 
-checkpoint_dir = os.path.join('../results/KITTI',opt.name)
+checkpoint_dir = os.path.join('../results/NCLT',opt.name)
 if not os.path.exists(checkpoint_dir):
     os.makedirs(checkpoint_dir)
 if not os.path.exists(os.path.join(checkpoint_dir, "pose_ests")):
@@ -68,10 +68,10 @@ else:
     pairwise_pose = None
 
 print('loading dataset')
-train_dataset = Kitti(opt.data_dir, opt.traj, opt.voxel_size, init_pose=init_pose, 
+train_dataset = Nclt(opt.data_dir, opt.traj, opt.voxel_size, init_pose=init_pose, 
         group=opt.group, group_size=opt.group_size, pairwise=opt.pairwise, pairwise_pose=pairwise_pose)
 train_loader = DataLoader(train_dataset, batch_size=None, num_workers=4, shuffle=True)
-eval_dataset = KittiEval(train_dataset)
+eval_dataset = NcltEval(train_dataset)
 eval_loader = DataLoader(eval_dataset, batch_size=64, num_workers=4)
 loss_fn = eval('loss.'+opt.loss)
 
@@ -166,7 +166,7 @@ for epoch in range(starting_epoch, opt.n_epochs):
     save_name = os.path.join(checkpoint_dir, "pose_ests", str(epoch+1))
     np.save(save_name,pose_est_np)
 
-    utils.plot_global_pose(checkpoint_dir, "KITTI", epoch+1)
+    utils.plot_global_pose(checkpoint_dir, "NCLT", epoch+1)
 
     trans_ate, rot_ate = utils.compute_ate(pose_est_np, train_dataset.gt_pose)
     print("Translation ATE:", trans_ate)

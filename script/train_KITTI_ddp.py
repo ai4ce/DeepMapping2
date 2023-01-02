@@ -82,6 +82,8 @@ def ddp_func(rank, world_size, opt):
         print("Unsupported optimizer")
         assert()
 
+    scaler = torch.cuda.amp.GradScaler()
+
     if opt.resume:
         save_name = os.path.join(checkpoint_dir, "model_best.pth")
         dist.barrier()
@@ -113,11 +115,17 @@ def ddp_func(rank, world_size, opt):
             valid_pt = valid_pt.to(rank)
             init_global_pose = init_global_pose.to(rank)
             pairwise_pose = pairwise_pose.to(rank)
-            loss = ddp_model(obs, init_global_pose, valid_pt, pairwise_pose)
-
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+            with torch.autocast("cuda"):
+                loss, _, _, _ = ddp_model(obs, init_global_pose, valid_pt, pairwise_pose)
+            
+            scaler.scale(loss).backward()
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.05)
+            scaler.step(optimizer)
+            scaler.update()
+            optimizer.zero_grad(set_to_none=True)
+            # loss.backward()
+            # optimizer.step()
 
             training_loss += loss.item()
         
@@ -147,14 +155,14 @@ def ddp_func(rank, world_size, opt):
             save_name = os.path.join(checkpoint_dir, "pose_ests", str(epoch+1))
             np.save(save_name,pose_est_np)
 
-            utils.plot_global_pose(checkpoint_dir, epoch+1)
+            utils.plot_global_pose(checkpoint_dir, "KITTI", epoch+1)
 
             trans_ate, rot_ate = utils.compute_ate(pose_est_np, train_dataset.gt_pose)
             trans_ates.append(trans_ate)
             rot_ates.append(rot_ate)
-            utils.plot_curve(trans_ates, "translation_ate", checkpoint_dir)
-            utils.plot_curve(rot_ates, "rotation_ate", checkpoint_dir)
-            utils.plot_curve(training_losses, "training_loss", checkpoint_dir)
+            # utils.plot_curve(trans_ates, "translation_ate", checkpoint_dir)
+            # utils.plot_curve(rot_ates, "rotation_ate", checkpoint_dir)
+            # utils.plot_curve(training_losses, "training_loss", checkpoint_dir)
 
             if training_loss_epoch < best_loss:
                 print("lowest loss:", training_loss_epoch)
@@ -167,7 +175,7 @@ def ddp_func(rank, world_size, opt):
 
                 # Save checkpoint
                 save_name = os.path.join(checkpoint_dir,'model_best.pth')
-                utils.save_checkpoint(save_name,ddp_model,optimizer,epoch)
+                utils.save_checkpoint(save_name, ddp_model, optimizer, epoch)
     utils.cleanup()
 
 

@@ -137,18 +137,25 @@ def compute_ate(output,target):
     location_aligned = location_aligned.T
     rotation = Rot.from_matrix(R).as_euler("XYZ")
     yaw_aligned = output[:, -1] + rotation[-1]
+    yaw_gt = target[:, -1]
     while np.any(yaw_aligned > np.pi):
         yaw_aligned[yaw_aligned > np.pi] = yaw_aligned[yaw_aligned > np.pi] - 2 * np.pi
     while np.any(yaw_aligned < -np.pi):
-        yaw_aligned[yaw_aligned < np.pi] = yaw_aligned[yaw_aligned < np.pi] + 2 * np.pi
+        yaw_aligned[yaw_aligned < -np.pi] = yaw_aligned[yaw_aligned < -np.pi] + 2 * np.pi
+    while np.any(yaw_gt > np.pi):
+        yaw_gt[yaw_gt > np.pi] = yaw_gt[yaw_gt > np.pi] - 2 * np.pi
+    while np.any(yaw_gt < -np.pi):
+        yaw_gt[yaw_gt < -np.pi] = yaw_gt[yaw_gt < -np.pi] + 2 * np.pi
 
     trans_error = np.linalg.norm(location_aligned - target_location, axis=1)
-    rot_error = np.abs(yaw_aligned - target[:, -1])
+    rot_error = np.abs(yaw_aligned - yaw_gt)
+    rot_error[rot_error > np.pi] = 2 * np.pi - rot_error[rot_error > np.pi]
     
     trans_ate = np.sqrt(np.mean(trans_error))
     rot_ate = np.mean(rot_error)
 
-    return trans_ate, rot_ate
+    return trans_ate, rot_ate*180/np.pi
+
 
 def remove_invalid_pcd(pcd):
     """

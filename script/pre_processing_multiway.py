@@ -1,6 +1,7 @@
 import set_path
 import os
 import argparse
+import time
 import numpy as np
 
 import utils
@@ -52,7 +53,7 @@ n_pc = len(pcd_files)
 group_matrix = np.load(os.path.join(dataset_dir, "group_matrix.npy"))[:, :opt.group_size]
 # pcd_files = np.asarray(pcd_files)
 pcds = []
-if dataset == "KITTI":
+if dataset == "KITTI" or "Nebula":
     for i in tqdm(range(n_pc)):
         pcd = o3d.io.read_point_cloud(os.path.join(dataset_dir, pcd_files[i])).voxel_down_sample(opt.voxel_size)
         pcd.estimate_normals()
@@ -66,7 +67,7 @@ elif dataset == "NCLT":
         pcd = pcd.voxel_down_sample(opt.voxel_size)
         pcd.estimate_normals()
         pcds.append(pcd)
-num_seg = 100 # Number of segments in multiway regiatration
+num_seg = 250 # Number of segments in multiway regiatration
 K = n_pc // num_seg # Number of frames in a segment
 
 print('running initial icp')
@@ -99,6 +100,7 @@ for idx in tqdm(range(n_pc-1)):
     #     assert()
 print("Number of segments:", len(segments))
 print("running pairwise registration on segements")
+start_time = time.time()
 pose_graph = o3d.pipelines.registration.PoseGraph()
 odometry = np.identity(4)
 pose_graph.nodes.append(o3d.pipelines.registration.PoseGraphNode(odometry))
@@ -138,6 +140,9 @@ with o3d.utility.VerbosityContextManager(o3d.utility.VerbosityLevel.Debug) as cm
         o3d.pipelines.registration.GlobalOptimizationConvergenceCriteria(),
         option
     )
+end_time = time.time()
+print("Running time:", end_time-start_time)
+assert()
 
 print('saving results')
 pose_est = np.zeros((len(segments * K), 6))

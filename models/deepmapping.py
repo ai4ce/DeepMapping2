@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from .networks import LocNetRegKITTI, MLP
-from utils import transform_to_global_KITTI
+from utils import transform_to_global_KITTI, compose_pose_diff
 
 def get_M_net_inputs_labels(occupied_points, unoccupited_points):
     """
@@ -68,13 +68,15 @@ class DeepMapping2(nn.Module):
 
         if self.training:
             self.valid_points = valid_points
-            # pose_consis = self.pose_est[1:, :] + pairwise_pose
-            self.centorid = self.obs_global_est[:1, :, :].expand(G-1, -1, -1)
-            relative_centroid_local = self.obs_local[:1, :, :].expand(G-1, -1, -1)
-            self.relative_centroid = transform_to_global_KITTI(
-                self.pose_est[1:, :], 
-                transform_to_global_KITTI(pairwise_pose, relative_centroid_local)
-            )
+            if self.loss_fn.__name__ == "pose":
+                self.t_src, self.t_dst, self.r_src, self.r_dst = compose_pose_diff(self.pose_est, pairwise_pose)
+            else:
+                self.centorid = self.obs_global_est[:1, :, :].expand(G-1, -1, -1)
+                relative_centroid_local = self.obs_local[:1, :, :].expand(G-1, -1, -1)
+                self.relative_centroid = transform_to_global_KITTI(
+                    self.pose_est[1:, :], 
+                    transform_to_global_KITTI(pairwise_pose, relative_centroid_local)
+                )
             self.unoccupied_local = sample_unoccupied_point(
                 self.obs_local, self.n_samples)
             self.unoccupied_global = transform_to_global_KITTI(
@@ -100,5 +102,8 @@ class DeepMapping2(nn.Module):
             loss = self.loss_fn(self.occp_prob, self.gt, bce_weight)  # BCE
         elif self.loss_fn.__name__ == 'bce_ch_eu':
             loss = self.loss_fn(self.occp_prob, self.gt, self.obs_global_est, self.relative_centroid, self.centorid,
+                                self.valid_points, bce_weight, seq=2, alpha=self.alpha, beta=self.beta)
+        elif self.loss_fn.__name__ == 'pose':
+            loss = self.loss_fn(self.occp_prob, self.gt, self.obs_global_est, self.t_src, self.t_dst, self.r_src, self.r_dst,
                                 self.valid_points, bce_weight, seq=2, alpha=self.alpha, beta=self.beta)
         return loss

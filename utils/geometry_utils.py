@@ -48,6 +48,32 @@ def transform_to_global_KITTI(pose, obs_local):
     return obs_global
 
 
+def compose_pose_diff(pose_est, pairwise):
+    """
+    compose global estimation and local pairwise pose for comparison
+    :param pose_est: global estimation of shape <Bx6> <x,y,z,row,pitch,yaw>
+    :param pairwise: pairwise pose of shape <B-1x6> <x,y,z,row,pitch,yaw>
+    :return t_src: global estimation of shape <B-1x6>
+    :return dst: pairwise + adjacent pose of shape <B-1x6>
+    """
+    G = pose_est.shape[0]
+    # src = pose_est[:1, :].expand(G-1, -1)
+    t_src = pose_est[:1, :3].expand(G-1, -1)
+    r_src = pose_est[:1, 3:].expand(G-1, -1)
+    r_src = euler_angles_to_matrix(r_src, convention="XYZ")
+
+    xyz = pose_est[1:, :3] + pairwise[:, :3]
+    t_dst = xyz
+    rpy_est = pose_est[1:, 3:]
+    rpy_pairwise = pairwise[:, 3:]
+    rotation_est = euler_angles_to_matrix(rpy_est, convention="XYZ")
+    rotation_pairwise = euler_angles_to_matrix(rpy_pairwise, convention="XYZ")
+    r_dst = torch.bmm(rotation_est, rotation_pairwise)
+    # rpy = matrix_to_euler_angles(rotation, convention="XYZ")
+    # dst = torch.concat((xyz, rpy), dim=1)
+    return t_src, t_dst, r_src, r_dst
+
+
 def rigid_transform_kD(A, B):
     """
     Find optimal transformation between two sets of corresponding points
@@ -101,7 +127,7 @@ def icp_o3d(src, dst, voxel_size=0.5, return_type="Rt"):
         R*src + t
     '''
     # List of Convergence-Criteria for Multi-Scale ICP:
-    threshold = 2.5 * voxel_size
+    threshold = 1
     trans_init = np.eye(4)
     criteria = o3d.pipelines.registration.ICPConvergenceCriteria(1e-6, 1e-6, max_iteration=80)
 

@@ -145,7 +145,8 @@ for epoch in range(starting_epoch, opt.n_epochs):
         training_loss += loss.item()
         bce_loss += bce
         ch_loss += ch
-        eu_loss += eu
+        if loss == "bce_ch_eu" or loss == "pose":
+            eu_loss += eu
     
     time_end = time.time()
     print("Training time: {:.2f}s".format(time_end - time_start))
@@ -201,3 +202,6 @@ for epoch in range(starting_epoch, opt.n_epochs):
         # Save checkpoint
         save_name = os.path.join(checkpoint_dir,'model_best.pth')
         utils.save_checkpoint(save_name,model,optimizer,epoch)
+
+training_losses = np.array(training_losses)
+np.save(os.path.join(checkpoint_dir, "loss.npy"), training_losses)

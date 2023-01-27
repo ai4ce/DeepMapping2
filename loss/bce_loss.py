@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class BCEWithLogitsLoss2(nn.Module):
@@ -25,7 +26,7 @@ def bce_with_logits(input, target, weight=None, reduction='elementwise_mean'):
             raise ValueError("Weight size ({}) must be the same as input size ({})".format(
                 weight.size(), input.size()))
 
-    max_val = (-input).clamp(min=1e-4)
+    max_val = (-input).clamp(min=1e-5)
     loss = input - input * target + max_val + \
         ((-max_val).exp() + (-input - max_val).exp()).log()
 
@@ -45,6 +46,7 @@ def bce_with_logits(input, target, weight=None, reduction='elementwise_mean'):
 
 
 def bce(pred, targets, weight=None):
-    criternion = BCEWithLogitsLoss2(weight=weight)
-    loss = criternion(pred, targets)
+    # criternion = BCEWithLogitsLoss2(weight=weight)
+    # loss = criternion(pred, targets)
+    loss = F.binary_cross_entropy_with_logits(pred, targets, weight=weight)
     return loss

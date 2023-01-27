@@ -128,14 +128,16 @@ for epoch in range(starting_epoch, opt.n_epochs):
         init_global_pose = init_global_pose.to(device)
         pairwise_pose = pairwise_pose.to(device)
         if opt.amp:
+            optimizer.zero_grad()
             with torch.autocast("cuda"):
                 loss, bce, ch, eu = model(obs, init_global_pose, valid_pt, pairwise_pose)
-                scaler.scale(loss).backward()
-                scaler.unscale_(optimizer)
-                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.05)
-                scaler.step(optimizer)
-                scaler.update()
-                optimizer.zero_grad(set_to_none=True)
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+            # optimizer.zero_grad()
+            # loss.backward()
+            # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.05)
+            # optimizer.step()
         else:
             loss, bce, ch, eu = model(obs, init_global_pose, valid_pt, pairwise_pose)
             optimizer.zero_grad()
@@ -149,6 +151,7 @@ for epoch in range(starting_epoch, opt.n_epochs):
             eu_loss += eu
     
     time_end = time.time()
+    # print(model.parameters().grad)
     print("Training time: {:.2f}s".format(time_end - time_start))
     training_loss_epoch = training_loss/len(train_loader)
     bce_epoch = bce_loss / len(train_loader)
@@ -181,7 +184,12 @@ for epoch in range(starting_epoch, opt.n_epochs):
 
     utils.plot_global_pose(checkpoint_dir, opt.dataset, epoch+1)
 
-    trans_ate, rot_ate = utils.compute_ate(pose_est_np, train_dataset.gt_pose)
+    try:
+        trans_ate, rot_ate = utils.compute_ate(pose_est_np, train_dataset.gt_pose)
+    except np.linalg.LinAlgError:
+        print("SVD did not converge, using ATE from last epoch.")
+        trans_ate = trans_ates[-1]
+        rot_ate = rot_ates[-1]
     print("Translation ATE:", trans_ate)
     print("Rotation ATE", rot_ate)
     trans_ates.append(trans_ate)
@@ -202,6 +210,8 @@ for epoch in range(starting_epoch, opt.n_epochs):
         # Save checkpoint
         save_name = os.path.join(checkpoint_dir,'model_best.pth')
         utils.save_checkpoint(save_name,model,optimizer,epoch)
+
+    print()
 
 training_losses = np.array(training_losses)
 np.save(os.path.join(checkpoint_dir, "loss.npy"), training_losses)

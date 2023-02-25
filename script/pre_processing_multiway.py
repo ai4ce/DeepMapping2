@@ -142,7 +142,6 @@ with o3d.utility.VerbosityContextManager(o3d.utility.VerbosityLevel.Debug) as cm
     )
 end_time = time.time()
 print("Running time:", end_time-start_time)
-assert()
 
 print('saving results')
 pose_est = np.zeros((len(segments * K), 6))

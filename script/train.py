@@ -30,12 +30,10 @@ parser.add_argument('--dataset', type=str, default="KITTI", help="Type of datase
 parser.add_argument('-d','--data_dir',type=str,default='../data/ActiveVisionDataset/',help='dataset path')
 parser.add_argument('-t','--traj',type=str,default='2011_09_30_drive_0018_sync_full',help='trajectory file folder')
 parser.add_argument('-m','--model', type=str, default=None,help='pretrained model name')
-parser.add_argument('-i','--init', type=str, default=None,help='init pose')
+parser.add_argument('-i','--init', type=str, default=None, help='path to initial pose')
+parser.add_argument('-p', '--pairwise', type=str, default=None, help='path to pairwise pose')
 parser.add_argument('--log_interval',type=int,default=10,help='logging interval of saving results')
-parser.add_argument('-g', '--group', default=False, action='store_true', help='whether to group frames')
 parser.add_argument('--group_size',type=int,default=8,help='group size')
-parser.add_argument('--pairwise', action='store_true',
-                    help='If present, use global consistency loss')
 parser.add_argument('--resume', action='store_true',
                     help='If present, restore checkpoint and resume training')
 parser.add_argument('--alpha', type=float, default=0.1, help='weight for chamfer loss')
@@ -54,29 +52,16 @@ utils.save_opt(checkpoint_dir,opt)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-if opt.init is not None:
-    print("loading initial pose from:", opt.init)
-    init_pose_np = np.load(opt.init)
-    init_pose_np = init_pose_np.astype("float32")
-    init_pose = torch.from_numpy(init_pose_np)
-else:
-    init_pose = None
-
-if opt.pairwise:
-    pairwise_path = os.path.join(checkpoint_dir, "pose_pairwise.npy")
-    print("loading pairwise pose from", pairwise_path)
-    pairwise_pose = np.load(pairwise_path)
-else:
-    pairwise_pose = None
+init_pose_np = np.load(opt.init).astype("float32")
+init_pose = torch.from_numpy(init_pose_np)
+pairwise_pose = np.load(opt.pairwise).astype("float32")
 
 print('loading dataset')
 if opt.dataset == "KITTI":
-    train_dataset = Kitti(opt.data_dir, opt.traj, opt.voxel_size, init_pose=init_pose, 
-            group=opt.group, group_size=opt.group_size, pairwise=opt.pairwise, pairwise_pose=pairwise_pose)
+    train_dataset = Kitti(opt.data_dir, opt.traj, opt.voxel_size, init_pose=init_pose, group_size=opt.group_size, pairwise_pose=pairwise_pose)
     eval_dataset = KittiEval(train_dataset)
-elif opt.dataset == "NCLT":
-    train_dataset = Nclt(opt.data_dir, opt.traj, opt.voxel_size, init_pose=init_pose, 
-        group=opt.group, group_size=opt.group_size, pairwise=opt.pairwise, pairwise_pose=pairwise_pose)
+elif opt.dataset == "NCLT" or "Nebula":
+    train_dataset = Nclt(opt.data_dir, opt.traj, opt.voxel_size, init_pose=init_pose, group_size=opt.group_size, pairwise_pose=pairwise_pose)
     eval_dataset = NcltEval(train_dataset)
 else:
     assert 0, "Unsupported dataset"

@@ -1,11 +1,10 @@
 # DeepMapping2: Self-Supervised Large-Scale LiDAR Map Optimization
 
-[Chao Chen](https://joechencc.github.io/)\*, [Xinhao Liu](https://gaaaavin.github.io/)\*, [Yiming Li](https://roboticsyimingli.github.io/), [Li Ding](https://www.hajim.rochester.edu/ece/lding6/), [Chen Feng]((https://scholar.google.com/citations?user=YeG8ZM0AAAAJ)
-)
+[Chao Chen](https://joechencc.github.io/)\*, [Xinhao Liu](https://gaaaavin.github.io/)\*, [Yiming Li](https://roboticsyimingli.github.io/), [Li Ding](https://www.hajim.rochester.edu/ece/lding6/), [Chen Feng](https://scholar.google.com/citations?user=YeG8ZM0AAAAJ)
 
 <p align="center">
-<img src='./src/KITTI_0018.gif' width="200">
-<img src='./src/KITTI_0027.gif' width="200">
+<img src='./src/KITTI_0018.gif' width="400">
+<img src='./src/KITTI_0027.gif' width="400">
 </p>
 
 ## News

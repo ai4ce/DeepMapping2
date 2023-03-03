@@ -73,6 +73,9 @@
             DeepMapping2&nbsp;&nbsp
           </h1>
           <h1 class="title is-2 publication-title">Self-Supervised Large-Scale LiDAR Map Optimization</h1>
+          <div class="column is-full_width">
+            <h2 class="title is-4">CVPR 2023</h2>
+          </div>
           <div class="is-size-5 publication-authors">
             <span class="author-block">
               <a href="https://joechencc.github.io">Chao Chen*</a><sup>1</sup>,</span>
@@ -157,45 +160,30 @@
   </div>
 </section>
 
-<section class="hero teaser">
-  <div class="container is-max-desktop">
-    <div class="hero-body">
-      <!-- <video id="teaser" controls loop height="100%">
-        <source src="./static/video/Multimedia.mp4"
-                type="video/mp4">
-      </video> -->
-      <!-- <img class="rounded" src="./media/nice-slam/teaser.png" > -->
-      <!-- <br><br><br> -->
-      <!-- <h2 class="subtitle has-text-centered">
-      Project explanation
-      </h2> -->
-    <!-- <h2 class="subtitle has-text-centered">
-      (The <span style="color:#000000;">black</span> / <span style="color:#ff0000;">red</span> lines are the ground truth / predicted camera trajectory)
-    </h2> -->    
+<section class="section has-text-centered">
+  <div style="text-align: center; justify-content: center; display: flex; margin-bottom: 20px;">
+    <div style="margin-bottom: 5pt; width: 25%; margin-left: 10%; margin-right: 2%; position: relative;">
+      <p style="margin-bottom: 1pt;">Individual reconstruction</p>
+      <img src = 'static/images/KITTI_0018.gif' width="400" height="400">
+    </div>
+    <div style="margin-bottom: 5pt; width: 25%; margin-left: 2%; margin-right: 2%; position: relative;">
+      <p style="margin-bottom: 1pt;">Scene completion</p>
+      <img src = 'static/images/KITTI_0027.gif' width="400" height="400">
+    </div>
+    <div style="margin-bottom: 5pt; width: 25%; margin-left: 2%; margin-right: 2%; position: relative;">
+      <p style="margin-bottom: 1pt;">Object detection</p>
+      <img src = 'static/images/NCLT_0108.gif' width="400" height="400">
+    </div>
+    <div style="margin-bottom: 5pt; width: 25%; margin-left: 2%; margin-right: 10%; position: relative;">
+      <p style="margin-bottom: 1pt;">Semantic segmantation</p>
+      <img src = 'static/images/Nebula_E.gif' width="400" height="400">
     </div>
   </div>
-</section>
-
-<section class="hero teaser">
-  <div class="container is-max-desktop">
-    <div class="hero-body">
-      <!-- <video id="teaser" autoplay muted loop height="100%">
-        <source src="./static/images/SUBT_video.mp4"
-                type="video/mp4">
-      </video> -->
-      <img src="./static/images/kitti_map.jpg" height="300">
-      <!-- <img class="rounded" src="./media/nice-slam/teaser.png" > -->
-      <br><br><br>
-      <h2 class="subtitle has-text-centered">
-          <b>Mapping result on the KITTI dataset.</b> The bird's eye view map is shown together with the estimated sensor pose of each frame. Each pose is represented by an arrow indicating the xy-coordinate and heading (yaw angle) as shown in the bottom examples. The color indicates the frame index in the trajectory. Challenging regions are zoomed in for a clear view. Best viewed in color.
-    </h2>
-    <!-- <h2 class="subtitle has-text-centered">
-      (The <span style="color:#000000;">black</span> / <span style="color:#ff0000;">red</span> lines are the ground truth / predicted camera trajectory)
-    </h2> -->
-    <!-- <h2 class="is-size-6 has-text-centered">(The left are few-shot annotations online provided by user and right is the detection results)</h2> -->
-    
-    </div>
+  <div style="text-align: center; justify-content: center; display: flex; margin-left: 5%; margin-right: 5%;"> 
+    <p><b>Mapping result on the KITTI dataset.</b> The bird's eye view map is shown together with the estimated sensor pose of each frame. Each pose is represented by an arrow indicating the xy-coordinate and heading (yaw angle) as shown in the bottom examples.
+    </p>
   </div>
+  <br>
 </section>
 
 <section class="section">
@@ -254,13 +242,14 @@
         <div class="content has-text-justified">
           <br>  
           <p>
-          Our contributions are summarized as follows:
-            <li> 
-                Our DeepMapping2 is the first self-supervised large-scale LiDAR map optimization method as far as we know, and this generic method achieves state-of-the-art mapping results on various indoor/outdoor public datasets, including KITTI, NCLT, and the challenging underground dataset Nebula. Our code will be released to ensure reproducibility.
-            </li>
-            <li> 
-                Our analysis reveals why DeepMapping fails to scale up and leads to the two novel techniques to incorporate loop closing and local registration in the DeepMapping framework. The necessity and effectiveness of the two techniques are further validated in our ablation study.
-            </li>
+            <b>Pipeline of DeepMapping2.</b> The pipeline mainly consists of place-recognition-based batch organization and learning-based optimization. 
+            In batch organization, the input point clouds are organized into mini-batches by topological map 
+            attained from place recognition. Each batch contains an anchor frame and several spatially 
+            closed neighbor frames. The transformation between the anchor frame and each neighbor frame 
+            is obtained by pairwise registration. In optimization, each batch is fed into L-Net to estimate 
+            the global pose. The transformed global anchor frame is then obtained in two ways: directly from 
+            the global pose of the anchor frame and from the global pose of the neighbor frame and the 
+            pairwise registration.
           </p>
         </div>
       </div>
@@ -271,7 +260,7 @@
     <!-- Applications.-->
     <div class="columns is-centered has-text-centered">
       <div class="column is-full_width">
-        <h2 class="title is-3">Dataset and Mapping results</h2>
+        <h2 class="title is-3">Mapping results</h2>
       </div>
     </div>
     <p>
@@ -281,82 +270,7 @@
       <img src="./static/images/kitti_map.jpg" width=1080 border=2px class="center"/> &nbsp;&nbsp;
       <img src="./static/images/nclt_map.jpg"  width=1080 border=2px class="center"/> &nbsp;&nbsp;
       <img src="./static/images/nebula_map.jpg" width=1080 border=2px class="center"/>
-      <div class="content has-text-justified">
-        <br>  
-        <p>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(a) <a href="https://www.cvlibs.net/datasets/kitti/">KITTI Data</a>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (b) <a href="http://robots.engin.umich.edu/nclt/">NCLT Data</a>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (c) <a href="https://github.com/NeBula-Autonomy/nebula-odometry-dataset">Nebula Data</a>
-          <br>
-          <br>
-          We employ three datasets for a comprehensive evaluation: (1) KITTI dataset for evaluations in outdoor scenarios, (2) NeBula odometry dataset for evaluations in indoor environments where GPS signal is not available, and (3) campus-level NCLT dataset for evaluations in both indoor and outdoor scenarios.
-        </p>
-
-        <p>
-          <em><b>KITTI dataset</b></em> is a widely-used authoritative benchmark to evaluate SLAM-based algorithms. We employ the two most complex and challenging scenes from the dataset, where lots of places are revisited multiple times and the explored area is relatively large. Meanwhile, there are dynamic objects on the road, further increasing the difficulties.
-        </p>
-        <p>
-          <em><b>NCLT dataset</b></em> is a large-scale LiDAR dataset collected in the University of Michigan’s North Campus. The point clouds are collected using a Velodyne HDL-32E 3D LiDAR mounted on a Segway robot. Overall, the NCLT dataset has a robot trajectory with a length of 147.4 km and maintains 27 discrete mapping sessions over the year. Each mapping session includes both indoor and outdoor environments. We select an interval of the trajectory for better illustration.
-        </p>
-        <p>
-          <em><b>Nebula dataset:</b></em> is provided by the Team CoSTAR from the Jet Propulsion Laboratory at Caltech. The dataset has been used to test the multi-robot system in real-world environments such as tunnels and caves for the DARPA Subterranean Challenge. In each scene of the dataset, a ground-truth survey-grade map is provided by DARPA and the trajectory is produced by running LOCUS 2.0 on the map. Besides the point clouds, visual odometry and kinematic odometry are also included. We employ the data collected in the cave in Lava Beds National Monument. The whole trajectory is 590.85 meters long and contains 37,949 LiDAR scans in total.
-        </p>
-      </div>
     </div>
-    <p>
-      &nbsp
-    </p>
-    <p>
-      &nbsp
-    </p>
-
-
-    <section class="section">
-      <div class="container is-max-desktop">
-        <!-- <br> -->
-        <!-- Abstract. -->
-        <div class="columns is-centered has-text-centered">
-          <div class="column is-four-fifths">
-            <h2 class="title is-3">Training animation</h2>
-            <div class="column is-full_width">
-              <img src="static\images\KITTI_0018.gif" width=1000 height=90% overflow=hidden class="center"/>
-              <h3 class="title is-4">
-                  We demostration one <em><b>KITTI</b></em> mapping result, translation ATE and rotation ATE with respect to the epochs. Each pose is represented by an arrow indicating the xy-coordinate and heading (yaw angle) as shown in the bottom examples. The color indicates the frame index in the trajectory.
-              </h3>
-              <p>
-                &nbsp
-              </p>
-              <img src="static\images\KITTI_0027.gif" width=1000 height=100px overflow=hidden class="center"/>
-              <h3 class="title is-4">
-                  We demostration another <em><b>KITTI</b></em> mapping result, translation ATE and rotation ATE with respect to the epochs. The representation is the same as above.
-              </h3>
-              <p>
-                &nbsp
-              </p>
-              <img src="static\images\NCLT_0108.gif" width=1000 height=100px overflow=hidden class="center"/>
-              <h3 class="title is-4">
-                  We demostration one <em><b>NCLT</b></em> mapping result, translation ATE and rotation ATE with respect to the epochs. The representation is the same as above.
-              </h3>
-              <p>
-                &nbsp
-              </p>
-              <img src="static\images\Nebula_E.gif" width=1000 height=100px overflow=hidden class="center"/>
-              <h3 class="title is-4">
-                  We demostration another <em><b>Nebula</b></em> mapping result with respect to the epochs. The ground truth in this dataset is not accurate, thus translation ATE and rotation ATE are not provided. The representation is the same as above.
-              </h3>
-              <div class="content has-text-justified">
-         
-              </div>
-            </div>
-          </div>
-        </div>
-        <!--/ Abstract. -->
-      </div>
-    </section>
-
-
-    
-
 
 <section class="section" id="BibTeX">
   <div class="container is-max-desktop content">

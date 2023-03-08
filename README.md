@@ -18,7 +18,7 @@ LiDAR mapping is important yet challenging in self-driving and mobile robotics. 
 
 # Getting Started:
 ## Installation
-The code is tested with Python 3.9 and PyTorch 1.13.1.
+The code is tested with Python 3.9, PyTorch 1.13.1, and CUDA 11.6.
 
 To install the dependencies, you can create a virtual environment with
 ```

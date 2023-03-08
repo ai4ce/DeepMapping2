@@ -26,6 +26,7 @@ conda create -n dm2 python=3.9
 ```
 and then install the dependencies with
 ```
+conda activate dm2
 pip install -r requirements.txt
 ```
 

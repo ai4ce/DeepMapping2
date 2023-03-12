@@ -158,3 +158,27 @@ body {
 #interpolation-image-wrapper img {
   border-radius: 5px;
 }
+
+.teaser-container {
+  text-align: center; 
+  justify-content: center; 
+  display: flex; 
+  margin-bottom: 20px;
+  margin-left: 5%;
+  margin-right: 5%;
+}
+
+.teaser-item {
+  margin-bottom: 5pt; 
+  width: 100%; 
+}
+
+.teaser-title {
+  margin-bottom: 1pt;
+}
+
+@media (max-width: 1000px) {
+  .teaser-title {
+    padding: 0 5%;
+  }
+}

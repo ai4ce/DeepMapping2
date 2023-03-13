@@ -1,3 +1,5 @@
+# Copyright (C) 2022-2023, NYU AI4CE Lab. All rights reserved.
+
 import set_path
 import os
 import time

@@ -36,7 +36,8 @@ To download the dataset used for training and testing, please refer to [./data/R
 ## Usage
 To train the model, execute the script
 ```
-./script/run_train.sh
+cd script/
+./run_train.sh
 ```
 The visualization and evaluation results will be saved in the `results` folder.
 

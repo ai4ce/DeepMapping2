@@ -1,3 +1,6 @@
+# Copyright (C) 2022-2023, NYU AI4CE Lab. All rights reserved.
+
+
 import torch
 import torch.nn as nn
 from .networks import LocNetRegKITTI, MLP

@@ -6,7 +6,6 @@
 script/helpful_functions/traj_vis
 *.png
 *.sqf
-*.gif
 *.gz
 backup/
 

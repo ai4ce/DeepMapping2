@@ -268,9 +268,41 @@
       &nbsp
     </p>
     <div class="column is-full_width">
-      <img src="./static/images/kitti_map.jpg" width=1080 border=2px class="center"/> &nbsp;&nbsp;
-      <img src="./static/images/nclt_map.jpg"  width=1080 border=2px class="center"/> &nbsp;&nbsp;
-      <img src="./static/images/nebula_map.jpg" width=1080 border=2px class="center"/>
+      <img src="./static/images/kitti_map.jpg" width=1080 border=2px class="center"/>
+      <img src="./static/images/nclt_map.jpg"  width=1080 border=2px class="center"/>
+      <img src="./static/images/nebular_ko2.png" width=1080 border=2px class="center"/> &nbsp;&nbsp;
+      <img src="./static/images/nebula_dm2.png"  width=1080 border=2px class="center"/>
+      <div class="content has-text-justified">
+          <br>  
+          <p>
+            <b>NeBula dataset.</b> The above is the map from kinematic odometry (KO) and 
+            below is from KO+DeepMapping2.
+          </p>
+      </div>
+    </div>
+
+    <hr>
+
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-full_width">
+        <h2 class="title is-3">Trajectory error</h2>
+      </div>
+    </div>
+    <p>
+      &nbsp
+    </p>
+    <div class="column is-full_width">
+      <img src="./static/images/KITTI_0018_heatmap.png" width=1080 border=2px class="center"/> &nbsp;&nbsp;
+      <img src="./static/images/KITTI_0027_heatmap.png"  width=1080 border=2px class="center"/> &nbsp;&nbsp;
+      <img src="./static/images/NCLT_0108_heatmap.png" width=1080 border=2px class="center"/>
+      <div class="content has-text-justified">
+          <br>  
+          <p>
+            <b>Heat map for ATEs.</b> The trajectory error of each frame is illustrated by color,
+            with blue indicating the lowest error and red indicating the highest error.
+            The red box highlights the regions where DeepMapping2 improves over LeGO-LOAM.
+          </p>
+      </div>
     </div>
 
 <section class="section" id="BibTeX">

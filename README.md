@@ -23,11 +23,11 @@ The code is tested with Python 3.9, PyTorch 1.13.1, and CUDA 11.6.
 To install the dependencies, you can create a virtual environment with
 ```
 conda create -n dm2 python=3.9
-pip install torch==1.13.1 --index-url https://download.pytorch.org/whl/cu116
+conda activate dm2
 ```
 and then install the dependencies with
 ```
-conda activate dm2
+pip install torch==1.13.1 --index-url https://download.pytorch.org/whl/cu116
 pip install -r requirements.txt
 ```
 

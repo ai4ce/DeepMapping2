@@ -8,6 +8,8 @@
 </p>
 
 ## News
+**[2023-03]** The camera-ready version of our paper is available at [arXiv](https://arxiv.org/abs/2212.06331). **New figures** are added to the supplementary material.
+
 **[2023-02]** Our paper is accepted by [CVPR 2023](https://cvpr2023.thecvf.com/).
 
 **[2022-12]** Our paper is available at [arXiv](https://arxiv.org/abs/2212.06331) and the [project page](https://ai4ce.github.io/DeepMapping2/) is online.

@@ -148,3 +148,134 @@ def euler_angles_to_matrix(euler_angles: torch.Tensor, convention: str="XYZ") ->
     ]
     # return functools.reduce(torch.matmul, matrices)
     return torch.matmul(torch.matmul(matrices[0], matrices[1]), matrices[2])
+
+import torch
+
+
+def quaternion_to_matrix(quat: torch.Tensor, axis: str) -> torch.Tensor:
+    """
+    Converts a quaternion to a rotation matrix using PyTorch.
+
+    Args:
+        quat: A PyTorch tensor of shape (4,) representing the quaternion.
+              The tensor should be in the format (w, x, y, z).
+        axis: A string representing the order of rotations in the Euler angle
+              convention. Valid values are 'XYZ', 'XZY', 'YXZ', 'YZX', 'ZXY', and 'ZYX'.
+
+    Returns:
+        A PyTorch tensor of shape (3, 3) representing the rotation matrix and its form is specified by the axis input.
+    """
+    # Extract the scalar and vector components of the quaternion
+    w, x, y, z = quat
+
+    # Calculate the matrix elements
+    xx = x * x
+    xy = x * y
+    xz = x * z
+    yy = y * y
+    yz = y * z
+    zz = z * z
+    wx = w * x
+    wy = w * y
+    wz = w * z
+
+    # Construct the rotation matrix based on the specified Euler angle convention
+    if axis == 'XYZ':
+        matrix = torch.stack([
+            torch.stack([1-2*(yy+zz), 2*(xy+wz), 2*(xz-wy)]),
+            torch.stack([2*(xy-wz), 1-2*(xx+zz), 2*(yz+wx)]),
+            torch.stack([2*(xz+wy), 2*(yz-wx), 1-2*(xx+yy)])
+        ])
+    elif axis == 'XZY':
+        matrix = torch.stack([
+            torch.stack([1-2*(yy+zz), 2*(xy+wz), 2*(xz+wy)]),
+            torch.stack([2*(xy-wz), 1-2*(xx+zz), 2*(yz-wx)]),
+            torch.stack([2*(xz-wy), 2*(yz+wx), 1-2*(xx+yy)])
+        ])
+    elif axis == 'YZX':
+        matrix = torch.stack([
+            torch.stack([1-2*(xx+zz), 2*(xy-wz), 2*(xz+wy)]),
+            torch.stack([2*(xy+wz), 1-2*(yy+zz), 2*(yz-wx)]),
+            torch.stack([2*(xz-wy), 2*(yz+wx), 1-2*(xx+yy)])
+        ])
+    elif axis == 'YXZ':
+        matrix = torch.stack([
+            torch.stack([1-2*(zz+yy), 2*(xy-wz), 2*(xz+wy)]),
+            torch.stack([2*(xy+wz), 1-2*(zz+xx), 2*(yz-wx)]),
+            torch.stack([2*(xz-wy), 2*(yz+wx), 1-2*(yy+xx)])
+        ])
+
+    elif axis == 'ZYX':
+        matrix = torch.stack([
+            torch.stack([1-2*(yy+zz), 2*(xz+wy), 2*(xy-wz)]),
+            torch.stack([2*(xz-wy), 1-2*(xx+zz), 2*(yz+wx)]),
+            torch.stack([2*(xy+wz), 2*(yz-wx), 1-2*(xx+yy)])
+        ])
+
+    elif axis == 'ZXY':
+        matrix = torch.stack([
+            torch.stack([1-2*(yy+zz), 2*(yz-wx), 2*(xy+wz)]),
+            torch.stack([2*(yz+wx), 1-2*(zz+xx), 2*(xz-wy)]),
+            torch.stack([2*(xy-wz), 2*(xz+wy), 1-2*(yy+xx)])
+        ])
+    else:
+        raise ValueError(f"Invalid Euler angle convention '{axis}'")
+    
+    return matrix
+
+
+def matrix_to_quaternion(matrix: torch.Tensor, axis: str) -> torch.Tensor:
+    """
+    Converts a rotation matrix to a quaternion using PyTorch.
+
+    Args:
+        matrix: A PyTorch tensor of shape (3, 3) representing the rotation matrix.
+        axis: A string specifying the order of axes for the rotation matrix.
+              The string should be composed of three letters representing the axes,
+              with the first letter corresponding to the axis of rotation in the first
+              rotation operation, and so on. For example, 'XYZ' means the rotation
+              is performed first about the X axis, then the Y axis, then the Z axis.
+
+    Returns:
+        A PyTorch tensor of shape (4,) representing the quaternion.
+    """
+    # Check that the input matrix is valid
+    if matrix.shape != (3, 3):
+        raise ValueError("Invalid shape for rotation matrix. Expected (3, 3).")
+
+    # Determine the order of axes for the rotation matrix
+    if axis == 'XYZ':
+        order = [0, 1, 2]
+    elif axis == 'XZY':
+        order = [0, 2, 1]
+    elif axis == 'YXZ':
+        order = [1, 0, 2]
+    elif axis == 'YZX':
+        order = [1, 2, 0]
+    elif axis == 'ZXY':
+        order = [2, 0, 1]
+    elif axis == 'ZYX':
+        order = [2, 1, 0]
+    else:
+        raise ValueError("Invalid axis order. Expected one of 'XYZ', 'XZY', 'YXZ', 'YZX', 'ZXY', or 'ZYX'.")
+
+    # Extract the rotation angles from the rotation matrix
+    r = torch.zeros(3, dtype=matrix.dtype, device=matrix.device)
+    for i in range(3):
+        j, k = order[i], order[(i+1)%3]
+        r[i] = torch.atan2(matrix[j,k], matrix[i,i])
+
+    # Construct the quaternion from the rotation angles
+    qw = torch.cos(r[0]/2) * torch.cos(r[1]/2) * torch.cos(r[2]/2) + \
+         torch.sin(r[0]/2) * torch.sin(r[1]/2) * torch.sin(r[2]/2)
+    qx = torch.sin(r[0]/2) * torch.cos(r[1]/2) * torch.cos(r[2]/2) - \
+         torch.cos(r[0]/2) * torch.sin(r[1]/2) * torch.sin(r[2]/2)
+    qy = torch.cos(r[0]/2) * torch.sin(r[1]/2) * torch.cos(r[2]/2) + \
+         torch.sin(r[0]/2) * torch.cos(r[1]/2) * torch.sin(r[2]/2)
+    qz = torch.cos(r[0]/2) * torch.cos(r[1]/2) * torch.sin(r[2]/2) - \
+         torch.sin(r[0]/2) * torch.sin(r[1]/2) * torch.cos(r[2]/2)
+
+    # Combine the scalar and vector components of the quaternion
+    quat = torch.tensor([qw, qx, qy, qz], dtype=matrix.dtype, device=matrix.device)
+
+    return quat

@@ -152,130 +152,104 @@ def euler_angles_to_matrix(euler_angles: torch.Tensor, convention: str="XYZ") ->
 import torch
 
 
-def quaternion_to_matrix(quat: torch.Tensor, axis: str) -> torch.Tensor:
+def quaternion_to_matrix(quaternions: torch.Tensor) -> torch.Tensor:
     """
-    Converts a quaternion to a rotation matrix using PyTorch.
+    Convert rotations given as quaternions to rotation matrices.
 
     Args:
-        quat: A PyTorch tensor of shape (4,) representing the quaternion.
-              The tensor should be in the format (w, x, y, z).
-        axis: A string representing the order of rotations in the Euler angle
-              convention. Valid values are 'XYZ', 'XZY', 'YXZ', 'YZX', 'ZXY', and 'ZYX'.
+        quaternions: quaternions with real part first,
+            as tensor of shape (..., 4).
 
     Returns:
-        A PyTorch tensor of shape (3, 3) representing the rotation matrix and its form is specified by the axis input.
+        Rotation matrices as tensor of shape (..., 3, 3).
     """
-    # Extract the scalar and vector components of the quaternion
-    w, x, y, z = quat
+    r, i, j, k = torch.unbind(quaternions, -1)
+    # pyre-fixme[58]: `/` is not supported for operand types `float` and `Tensor`.
+    two_s = 2.0 / (quaternions * quaternions).sum(-1)
 
-    # Calculate the matrix elements
-    xx = x * x
-    xy = x * y
-    xz = x * z
-    yy = y * y
-    yz = y * z
-    zz = z * z
-    wx = w * x
-    wy = w * y
-    wz = w * z
+    o = torch.stack(
+        (
+            1 - two_s * (j * j + k * k),
+            two_s * (i * j - k * r),
+            two_s * (i * k + j * r),
+            two_s * (i * j + k * r),
+            1 - two_s * (i * i + k * k),
+            two_s * (j * k - i * r),
+            two_s * (i * k - j * r),
+            two_s * (j * k + i * r),
+            1 - two_s * (i * i + j * j),
+        ),
+        -1,
+    )
+    return o.reshape(quaternions.shape[:-1] + (3, 3))
 
-    # Construct the rotation matrix based on the specified Euler angle convention
-    if axis == 'XYZ':
-        matrix = torch.stack([
-            torch.stack([1-2*(yy+zz), 2*(xy+wz), 2*(xz-wy)]),
-            torch.stack([2*(xy-wz), 1-2*(xx+zz), 2*(yz+wx)]),
-            torch.stack([2*(xz+wy), 2*(yz-wx), 1-2*(xx+yy)])
-        ])
-    elif axis == 'XZY':
-        matrix = torch.stack([
-            torch.stack([1-2*(yy+zz), 2*(xy+wz), 2*(xz+wy)]),
-            torch.stack([2*(xy-wz), 1-2*(xx+zz), 2*(yz-wx)]),
-            torch.stack([2*(xz-wy), 2*(yz+wx), 1-2*(xx+yy)])
-        ])
-    elif axis == 'YZX':
-        matrix = torch.stack([
-            torch.stack([1-2*(xx+zz), 2*(xy-wz), 2*(xz+wy)]),
-            torch.stack([2*(xy+wz), 1-2*(yy+zz), 2*(yz-wx)]),
-            torch.stack([2*(xz-wy), 2*(yz+wx), 1-2*(xx+yy)])
-        ])
-    elif axis == 'YXZ':
-        matrix = torch.stack([
-            torch.stack([1-2*(zz+yy), 2*(xy-wz), 2*(xz+wy)]),
-            torch.stack([2*(xy+wz), 1-2*(zz+xx), 2*(yz-wx)]),
-            torch.stack([2*(xz-wy), 2*(yz+wx), 1-2*(yy+xx)])
-        ])
-
-    elif axis == 'ZYX':
-        matrix = torch.stack([
-            torch.stack([1-2*(yy+zz), 2*(xz+wy), 2*(xy-wz)]),
-            torch.stack([2*(xz-wy), 1-2*(xx+zz), 2*(yz+wx)]),
-            torch.stack([2*(xy+wz), 2*(yz-wx), 1-2*(xx+yy)])
-        ])
-
-    elif axis == 'ZXY':
-        matrix = torch.stack([
-            torch.stack([1-2*(yy+zz), 2*(yz-wx), 2*(xy+wz)]),
-            torch.stack([2*(yz+wx), 1-2*(zz+xx), 2*(xz-wy)]),
-            torch.stack([2*(xy-wz), 2*(xz+wy), 1-2*(yy+xx)])
-        ])
-    else:
-        raise ValueError(f"Invalid Euler angle convention '{axis}'")
-    
-    return matrix
-
-
-def matrix_to_quaternion(matrix: torch.Tensor, axis: str) -> torch.Tensor:
+def _sqrt_positive_part(x: torch.Tensor) -> torch.Tensor:
     """
-    Converts a rotation matrix to a quaternion using PyTorch.
+    Returns torch.sqrt(torch.max(0, x))
+    but with a zero subgradient where x is 0.
+    """
+    ret = torch.zeros_like(x)
+    positive_mask = x > 0
+    ret[positive_mask] = torch.sqrt(x[positive_mask])
+    return ret
+
+def matrix_to_quaternion(matrix: torch.Tensor) -> torch.Tensor:
+    """
+    Convert rotations given as rotation matrices to quaternions.
 
     Args:
-        matrix: A PyTorch tensor of shape (3, 3) representing the rotation matrix.
-        axis: A string specifying the order of axes for the rotation matrix.
-              The string should be composed of three letters representing the axes,
-              with the first letter corresponding to the axis of rotation in the first
-              rotation operation, and so on. For example, 'XYZ' means the rotation
-              is performed first about the X axis, then the Y axis, then the Z axis.
+        matrix: Rotation matrices as tensor of shape (..., 3, 3).
 
     Returns:
-        A PyTorch tensor of shape (4,) representing the quaternion.
+        quaternions with real part first, as tensor of shape (..., 4).
     """
-    # Check that the input matrix is valid
-    if matrix.shape != (3, 3):
-        raise ValueError("Invalid shape for rotation matrix. Expected (3, 3).")
+    if matrix.size(-1) != 3 or matrix.size(-2) != 3:
+        raise ValueError(f"Invalid rotation matrix shape {matrix.shape}.")
 
-    # Determine the order of axes for the rotation matrix
-    if axis == 'XYZ':
-        order = [0, 1, 2]
-    elif axis == 'XZY':
-        order = [0, 2, 1]
-    elif axis == 'YXZ':
-        order = [1, 0, 2]
-    elif axis == 'YZX':
-        order = [1, 2, 0]
-    elif axis == 'ZXY':
-        order = [2, 0, 1]
-    elif axis == 'ZYX':
-        order = [2, 1, 0]
-    else:
-        raise ValueError("Invalid axis order. Expected one of 'XYZ', 'XZY', 'YXZ', 'YZX', 'ZXY', or 'ZYX'.")
+    batch_dim = matrix.shape[:-2]
+    m00, m01, m02, m10, m11, m12, m20, m21, m22 = torch.unbind(
+        matrix.reshape(batch_dim + (9,)), dim=-1
+    )
 
-    # Extract the rotation angles from the rotation matrix
-    r = torch.zeros(3, dtype=matrix.dtype, device=matrix.device)
-    for i in range(3):
-        j, k = order[i], order[(i+1)%3]
-        r[i] = torch.atan2(matrix[j,k], matrix[i,i])
+    q_abs = _sqrt_positive_part(
+        torch.stack(
+            [
+                1.0 + m00 + m11 + m22,
+                1.0 + m00 - m11 - m22,
+                1.0 - m00 + m11 - m22,
+                1.0 - m00 - m11 + m22,
+            ],
+            dim=-1,
+        )
+    )
 
-    # Construct the quaternion from the rotation angles
-    qw = torch.cos(r[0]/2) * torch.cos(r[1]/2) * torch.cos(r[2]/2) + \
-         torch.sin(r[0]/2) * torch.sin(r[1]/2) * torch.sin(r[2]/2)
-    qx = torch.sin(r[0]/2) * torch.cos(r[1]/2) * torch.cos(r[2]/2) - \
-         torch.cos(r[0]/2) * torch.sin(r[1]/2) * torch.sin(r[2]/2)
-    qy = torch.cos(r[0]/2) * torch.sin(r[1]/2) * torch.cos(r[2]/2) + \
-         torch.sin(r[0]/2) * torch.cos(r[1]/2) * torch.sin(r[2]/2)
-    qz = torch.cos(r[0]/2) * torch.cos(r[1]/2) * torch.sin(r[2]/2) - \
-         torch.sin(r[0]/2) * torch.sin(r[1]/2) * torch.cos(r[2]/2)
+    # we produce the desired quaternion multiplied by each of r, i, j, k
+    quat_by_rijk = torch.stack(
+        [
+            # pyre-fixme[58]: `**` is not supported for operand types `Tensor` and
+            #  `int`.
+            torch.stack([q_abs[..., 0] ** 2, m21 - m12, m02 - m20, m10 - m01], dim=-1),
+            # pyre-fixme[58]: `**` is not supported for operand types `Tensor` and
+            #  `int`.
+            torch.stack([m21 - m12, q_abs[..., 1] ** 2, m10 + m01, m02 + m20], dim=-1),
+            # pyre-fixme[58]: `**` is not supported for operand types `Tensor` and
+            #  `int`.
+            torch.stack([m02 - m20, m10 + m01, q_abs[..., 2] ** 2, m12 + m21], dim=-1),
+            # pyre-fixme[58]: `**` is not supported for operand types `Tensor` and
+            #  `int`.
+            torch.stack([m10 - m01, m20 + m02, m21 + m12, q_abs[..., 3] ** 2], dim=-1),
+        ],
+        dim=-2,
+    )
 
-    # Combine the scalar and vector components of the quaternion
-    quat = torch.tensor([qw, qx, qy, qz], dtype=matrix.dtype, device=matrix.device)
+    # We floor here at 0.1 but the exact level is not important; if q_abs is small,
+    # the candidate won't be picked.
+    flr = torch.tensor(0.1).to(dtype=q_abs.dtype, device=q_abs.device)
+    quat_candidates = quat_by_rijk / (2.0 * q_abs[..., None].max(flr))
 
-    return quat
+    # if not for numerical problems, quat_candidates[i] should be same (up to a sign),
+    # forall i; we pick the best-conditioned one (with the largest denominator)
+
+    return quat_candidates[
+        F.one_hot(q_abs.argmax(dim=-1), num_classes=4) > 0.5, :
+    ].reshape(batch_dim + (4,))

@@ -61,13 +61,18 @@ def compose_pose_diff(pose_est, pairwise):
     t_src = pose_est[:1, :3].expand(G-1, -1)
     r_src = pose_est[:1, 3:].expand(G-1, -1)
     r_src = euler_angles_to_matrix(r_src, convention="XYZ")
+    r_src = matrix_to_quaternion(r_src)
 
     xyz = pose_est[1:, :3] + pairwise[:, :3]
     t_dst = xyz
     rpy_est = pose_est[1:, 3:]
     rpy_pairwise = pairwise[:, 3:]
     rotation_est = euler_angles_to_matrix(rpy_est, convention="XYZ")
+    rotation_est = matrix_to_quaternion(rotation_est)
+
     rotation_pairwise = euler_angles_to_matrix(rpy_pairwise, convention="XYZ")
+    rotation_pairwise = matrix_to_quaternion(rotation_pairwise)
+
     r_dst = torch.bmm(rotation_est, rotation_pairwise)
     # rpy = matrix_to_euler_angles(rotation, convention="XYZ")
     # dst = torch.concat((xyz, rpy), dim=1)

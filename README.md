@@ -44,10 +44,11 @@ To use a different initial pose and pairwise registration, please edit `INIT` an
 ## Citation
 If you find this work useful for your research, please cite our paper:
 ```
-@article{chen2022deepmapping2,
+@inproceedings{chen2023deepmapping2,
   title={DeepMapping2: Self-Supervised Large-Scale LiDAR Map Optimization},
   author={Chen, Chao and Liu, Xinhao and Li, Yiming and Ding, Li and Feng, Chen},
-  journal={arXiv preprint arXiv:2212.06331},
-  year={2022}
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
+  pages={9306--9316},
+  year={2023}
 }
 ```

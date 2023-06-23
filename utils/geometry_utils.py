@@ -180,7 +180,8 @@ def compute_ate(output,target):
     trans_ate = np.sqrt(np.mean(trans_error))
     rot_ate = np.mean(rot_error)
 
-    return trans_ate, rot_ate*180/np.pi
+    #return trans_ate, rot_ate*180/np.pi
+    return trans_ate, rot_ate
 
 
 def remove_invalid_pcd(pcd):

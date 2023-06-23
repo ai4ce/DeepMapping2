@@ -70,6 +70,7 @@ Following are the steps to generate embeddings using TF-VPR/NetVLAD method using
 3. Get R, t and estimate entire trajectory
 4. Store `x, y, z, roll, pitch, yaw`
 5. Save as - `init_pose.npy`
+6. This initial pose can also be calculated using other sources such as GPS, Odometry, and IMU.
 
 `init_pose.npy` should be an Nx6 numpy array, where N is the number of frames. Each row is the initial pose of a frame represented by `x, y, z, row, pitch, yaw`.
 
@@ -80,8 +81,8 @@ Following is an example pose initialized using ICP
 
 
 ## Step 4 - Generating the group matrix
-1. Apply KNN on the embeddings and get 30 nearest neighbors
-2. Keep only those neighbors whose distance to the anchor is less than a threshold. This rough distance information can be obtained from the ICP initialization performed in `Step 3` if GPS is not provided.
+1. Apply KNN on the embeddings and get nearest neighbors atleast twice the size of the intended group size. Group size is the size of the group matrix i.e. number of neighbors an anchor should have for training. This is a list of potential neighbors of a particular anchor which needs further filtering to remove **FALSE POSITIVES**.
+2. Keep only those neighbors whose distance to the anchor is less than a threshold. This threshold is basically the distance between the anchor and it's potential neighbor within which the neighbor will be considered a **TRUE POSITIVE**. A value of 10 (meters) should be a good starting point. This rough distance information can be obtained from the ICP initialization performed in `Step 3` if GPS is not provided.
 3. Append temporal neighbors, if neighbor length is less than intended group size
 4. Keep nearest neighbors, if neighbor length is greater than intended group size
 5. Verify that there are **NO FALSE POSITIVES** at all
@@ -89,15 +90,14 @@ Following is an example pose initialized using ICP
 7. Save as - `group_matrix.npy`
 8. This group matrix can also be constructed using other input sources such as GPS.
 
-
-Following is an example of a False Positive - few false neighbors distributed around the trajectory
-<p align="center">
-<img src='../src/false_positive.png' width="600">
-</p>
-
-Following is an example of a True Positive - true neighbors clustered around the anchor
+Following is an example of a **TRUE POSITIVE** - true neighbors clustered around the anchor
 <p align="center">
 <img src='../src/true_positive.png' width="600">
+</p>
+
+Following is an example of a **FALSE POSITIVE** - few false neighbors distributed around the trajectory
+<p align="center">
+<img src='../src/false_positive.png' width="600">
 </p>
 
 Following is an example of a section of trajectory with no false positives
@@ -107,7 +107,7 @@ Following is an example of a section of trajectory with no false positives
 
 
 ## Step 5 - Generating pairwise pose
-1. Perform ICP between anchor and each of its neighbors
+1. `Perform ICP between anchor and each of its neighbors`
 2. Get R, t 
 3. Convert to `x, y, z, roll, pitch, yaw`
 4. Save as - `pairwise_pose.npy`
@@ -120,11 +120,3 @@ To generate the three pre-processing files, appropriately change the parameters 
 ```
 run_pre_processing_custom.sh
 ``` 
-
-## Step 6 - Training
-Finally execute script
-```
-run_train.sh
-```
-to train DeepMapping2 on your own dataset
-The visualization and evaluation results will be stored in the `results` folder

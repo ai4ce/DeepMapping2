@@ -3,7 +3,8 @@ from matplotlib import pyplot as plt
 import torch
 import numpy as np
 from matplotlib import cm, colors, rc
-
+from .pytorch3d_utils import *
+from .geometry_utils import *
 
 def plot_global_point_cloud(point_cloud, pose, valid_points, save_dir, **kwargs):
     if torch.is_tensor(point_cloud):
@@ -47,7 +48,7 @@ def save_global_point_cloud_open3d(point_cloud,pose,save_dir):
     plt.savefig(save_name)
     plt.close()
 
-def plot_global_pose(checkpoint_dir, dataset="kitti", epoch=None, mode=None):
+def plot_global_pose(checkpoint_dir, dataset="kitti", epoch=None, mode=None, rotation_representation="quaternion"):
     rc('image', cmap='rainbow_r')
     if mode == "prior":
         location = np.load(os.path.join(checkpoint_dir, "pose_est_icp.npy"))
@@ -55,6 +56,12 @@ def plot_global_pose(checkpoint_dir, dataset="kitti", epoch=None, mode=None):
         location = np.load(os.path.join(checkpoint_dir, "gt_pose.npy"))
     else:
         location = np.load(os.path.join(checkpoint_dir, "pose_ests", str(epoch)+".npy"))
+    if rotation_representation == "quaternion":
+        location_quaternion = torch.tensor(location[:, 3:7], dtype=torch.float)  
+        q = location[:,3:]
+        q = q[:, [1, 2, 3, 0]]
+        rpy = Rot.from_quat(q).as_euler("XYZ")
+        location = np.concatenate((location[:,:3],rpy),axis=1)
     t = np.arange(location.shape[0]) / location.shape[0]
     # location[:, 0] = location[:, 0] - np.mean(location[:, 0])
     # location[:, 1] = location[:, 1] - np.mean(location[:, 1])

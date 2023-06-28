@@ -44,7 +44,7 @@ for i in range(gt_pose.shape[0]):
 color_palette = np.expand_dims(np.array(colors), 1)
 
 gt_global_list = [None] * gt_pose.shape[0]
-plot_global_pose(checkpoint_dir, dataset="KITTI", mode="gt")
+plot_global_pose(checkpoint_dir, dataset="KITTI", mode="gt", rotation_representation="euler_angle")
 # assert()
 gt_global = o3d.geometry.PointCloud()
 for i in tqdm(range(gt_pose.shape[0])):

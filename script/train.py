@@ -42,6 +42,7 @@ parser.add_argument('--alpha', type=float, default=0.1, help='weight for chamfer
 parser.add_argument('--beta', type=float, default=0.1, help='weight for euclidean loss')
 parser.add_argument('--optimizer', type=str, default="Adam", help="The optimizer to use")
 parser.add_argument('--amp', default=False, action='store_true', help="Toggle auto mixed precision")
+parser.add_argument('-r', '--rotation', type=str, default="quaternion", help="The rotation representation to use")
 
 opt = parser.parse_args()
 
@@ -71,9 +72,13 @@ train_loader = DataLoader(train_dataset, batch_size=None, num_workers=4, shuffle
 eval_loader = DataLoader(eval_dataset, batch_size=64, num_workers=4)
 loss_fn = eval('loss.'+opt.loss)
 
+if opt.rotation not in ['quaternion','euler_angle']:
+    print("Unsupported rotation representation")
+    assert()
+
 print('creating model')
 model = DeepMapping2(n_points=train_dataset.n_points, loss_fn=loss_fn,
-    n_samples=opt.n_samples, alpha=opt.alpha, beta=opt.beta).to(device)
+    n_samples=opt.n_samples, alpha=opt.alpha, beta=opt.beta, rotation_representation=opt.rotation).to(device)
 
 if opt.optimizer == "Adam":
     optimizer = optim.Adam(model.parameters(),lr=opt.lr)
@@ -169,10 +174,11 @@ for epoch in range(starting_epoch, opt.n_epochs):
     save_name = os.path.join(checkpoint_dir, "pose_ests", str(epoch+1))
     np.save(save_name,pose_est_np)
 
-    utils.plot_global_pose(checkpoint_dir, opt.dataset, epoch+1)
+    utils.plot_global_pose(checkpoint_dir, opt.dataset, epoch+1, rotation_representation=opt.rotation)
 
     try:
-        trans_ate, rot_ate = utils.compute_ate(pose_est_np, train_dataset.gt_pose)
+        print(pose_est_np.shape)
+        trans_ate, rot_ate = utils.compute_ate(pose_est_np, train_dataset.gt_pose, rotation_representation=opt.rotation)
     except np.linalg.LinAlgError:
         print("SVD did not converge, using ATE from last epoch.")
         trans_ate = trans_ates[-1]
@@ -188,7 +194,7 @@ for epoch in range(starting_epoch, opt.n_epochs):
     if training_loss_epoch < best_loss:
         print("lowest loss:", training_loss_epoch)
         best_loss = training_loss_epoch
-
+ 
         # Visulize global point clouds
         obs_global_est_np = np.concatenate(obs_global_est_np)
         save_name = os.path.join(checkpoint_dir,'obs_global_est.npy')

@@ -29,8 +29,55 @@ import sys
 #     obs_global = obs_global + pose[:, :3].unsqueeze(1)
 #     return obs_global
 
+def qmul_torch(q1, q2):
+    """
+    multiply two quaternion.
+    :param q1: <Bx4> <qw, qx, qy, qz>
+    :param q2: <Bx4> <qw, qx, qy, qz>
+    :return: <Bx4> <qw, qx, qy, qz>
+    """
+    w1, x1, y1, z1 = q1[:, 0], q1[:, 1], q1[:, 2], q1[:, 3]
+    w2, x2, y2, z2 = q2[:, 0], q2[:, 1], q2[:, 2], q2[:, 3]
+    w = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2
+    x = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2
+    y = w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2
+    z = w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2
+    return torch.stack((w, x, y, z), dim=1)
+    
+def quaternion_to_euler_pose(quaternion_pose):
+    """
+    convert quaternion pose to euler angles pose.
+    :param quaternion_pose: <Bx7> <x, y, z, qw, qx, qy, qz>
+    :return euler_pose: <Bx6> <x, y, z, row, pitch, yaw>
+    """
+    xyz = quaternion_pose[:,:3]
+    q = quaternion_pose[:,3:]
+    assert q.shape[-1] == 4
+    original_shape = list(q.shape)
+    original_shape[-1] = 3
+    q = q.view(-1, 4)
+    rotation_matrix = quaternion_to_matrix(q)
+    euler = matrix_to_euler_angles(rotation_matrix, convention="XYZ").view(original_shape)
+    euler_pose = torch.cat((xyz, euler), dim=1)
+    return euler_pose
+    
+def euler_pose_to_quaternion(euler_pose):
+    """
+    convert euler angles pose to quaternion pose.
+    :param euler_pose: <Bx6> <x, y, z, row, pitch, yaw>
+    :return quaternion_pose: <Bx7> <x, y, z, qw, qx, qy, qz>
+    """
+    xyz = euler_pose[:, :3]
+    e = euler_pose[:,3:]
+    assert e.shape[-1] == 3
+    original_shape = list(e.shape)
+    original_shape[-1] = 4
+    result = matrix_to_quaternion(euler_angles_to_matrix(e, convention="XYZ"))
+    quaternion = result.reshape(original_shape)
+    quaternion_pose = torch.cat((xyz, quaternion), dim=1)
+    return quaternion_pose
 
-def transform_to_global_KITTI(pose, obs_local):
+def transform_to_global_KITTI(pose, obs_local, rotation_representation):
     """
     transform obs local coordinate to global corrdinate frame
     :param pose: <Bx6> <x, y, z, row, pitch, yaw>
@@ -39,8 +86,14 @@ def transform_to_global_KITTI(pose, obs_local):
     """
     # translation
     assert obs_local.shape[0] == pose.shape[0]
-    rpy = pose[:, 3:]
-    rotation_matrix = euler_angles_to_matrix(rpy, convention="XYZ")
+    if rotation_representation == "euler_angle":
+        assert pose.shape[1] == 6
+        rpy = pose[:, 3:]
+        rotation_matrix = euler_angles_to_matrix(rpy, convention="XYZ")
+    elif rotation_representation == "quaternion":
+        assert pose.shape[1] == 7
+        quat = pose[:, 3:]
+        rotation_matrix = quaternion_to_matrix(quat)
     obs_global = torch.bmm(obs_local, rotation_matrix.transpose(1, 2))
     # obs_global[:, :, 0] = obs_global[:, :, 0] + pose[:, [0]]
     # obs_global[:, :, 1] = obs_global[:, :, 1] + pose[:, [1]]
@@ -48,7 +101,7 @@ def transform_to_global_KITTI(pose, obs_local):
     return obs_global
 
 
-def compose_pose_diff(pose_est, pairwise):
+def compose_pose_diff(pose_est, pairwise, rotation_representation):
     """
     compose global estimation and local pairwise pose for comparison
     :param pose_est: global estimation of shape <Bx6> <x,y,z,row,pitch,yaw>
@@ -66,8 +119,14 @@ def compose_pose_diff(pose_est, pairwise):
     t_dst = xyz
     rpy_est = pose_est[1:, 3:]
     rpy_pairwise = pairwise[:, 3:]
-    rotation_est = euler_angles_to_matrix(rpy_est, convention="XYZ")
-    rotation_pairwise = euler_angles_to_matrix(rpy_pairwise, convention="XYZ")
+    if rotation_representation == "euler_angle":
+        assert pose.shape[-1] != 6
+        rotation_est = euler_angles_to_matrix(rpy_est)
+        rotation_pairwise = euler_angles_to_matrix(rpy_pairwise)
+    elif rotation_representation == "quaternion":
+        assert pose.shape[-1] != 7
+        rotation_est = quaternion_to_matrix(rpy_est)
+        rotation_pairwise = quaternion_to_matrix(rpy_pairwise)
     r_dst = torch.bmm(rotation_est, rotation_pairwise)
     # rpy = matrix_to_euler_angles(rotation, convention="XYZ")
     # dst = torch.concat((xyz, rpy), dim=1)
@@ -146,7 +205,7 @@ def icp_o3d(src, dst, voxel_size=0.5, return_type="Rt"):
         return transformation.copy()
 
 
-def compute_ate(output,target):
+def compute_ate(output, target, rotation_representation):
     """
     compute absolute trajectory error for avd dataset
     Args:
@@ -162,7 +221,15 @@ def compute_ate(output,target):
     location_aligned = np.matmul(R , output_location.T) + t
     location_aligned = location_aligned.T
     rotation = Rot.from_matrix(R).as_euler("XYZ")
-    yaw_aligned = output[:, -1] + rotation[-1]
+    if rotation_representation == "euler_angle":
+        assert output_location.shape[-1] != 6
+        rpy = output[:,3:]
+    elif rotation_representation == "quaternion":
+        assert output_location.shape[-1] != 7
+        q = output[:,3:]
+        output_quat = q[:, [1, 2, 3, 0]]
+        rpy = Rot.from_quat(output_quat).as_euler("XYZ")
+    yaw_aligned = rpy[:, -1] + rotation[-1]
     yaw_gt = target[:, -1]
     while np.any(yaw_aligned > np.pi):
         yaw_aligned[yaw_aligned > np.pi] = yaw_aligned[yaw_aligned > np.pi] - 2 * np.pi

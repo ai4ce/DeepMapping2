@@ -37,6 +37,7 @@ parser.add_argument('-v','--voxel_size',type=float,default=1,help='size of downs
 parser.add_argument('--group_size',type=int,default=4,help='size of group')
 parser.add_argument('--mode',type=str,default="icp",help='local or global frame registraion')
 parser.add_argument('--embeddings',type=str,default="../custom/tfvpr_6_embeddings.npy",help='path to embeddings')
+parser.add_argument('-r', '--rotation', type=str, default="euler_angle", help="The rotation representation of pose estimation")
 opt = parser.parse_args()
 rc('image', cmap='rainbow_r')
 
@@ -46,6 +47,10 @@ checkpoint_dir = os.path.join('../results', dataset, opt.name)
 if not os.path.exists(checkpoint_dir):
     os.makedirs(checkpoint_dir)
 utils.save_opt(checkpoint_dir, opt)
+
+if opt.rotation not in ['quaternion','euler_angle']:
+    print("Unsupported rotation representation")
+    assert()
 
 print('Loading dataset')
 
@@ -108,13 +113,13 @@ np.save(os.path.join(checkpoint_dir, 'pose_est_icp.npy'), pose_est)
 np.save(os.path.join(prior_dir, 'init_pose.npy'), pose_est)
 
 print('Saving results')
-utils.plot_global_pose(checkpoint_dir, dataset, mode="prior")
+utils.plot_global_pose(checkpoint_dir, dataset, mode="prior", rotation_representation = opt.rotation)
 
 ## Calculate ATE ##
 #pose_est = np.load(os.path.join(checkpoint_dir, "pose_est_icp.npy"))
 gt_pose = np.load(os.path.join(dataset_dir, "gt_pose.npy"))
 
-trans_ate, rot_ate = utils.compute_ate(pose_est, gt_pose)
+trans_ate, rot_ate = utils.compute_ate(pose_est, gt_pose, rotation_representation = opt.rotation)
 print('{}, translation ate: {}'.format(opt.name,trans_ate))
 print('{}, rotation ate: {}'.format(opt.name,rot_ate))
 

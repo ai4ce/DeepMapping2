@@ -68,10 +68,15 @@ def ddp_func(rank, world_size, opt):
         eval_loader = DataLoader(eval_dataset, batch_size=128, num_workers=8)
 
     loss_fn = eval('loss.'+opt.loss)
+    
+    if opt.rotation not in ['quaternion','euler_angle']:
+        print("Unsupported rotation representation")
+        assert()
+    
     if rank == 0:
         print('creating model')
     model = DeepMapping2(n_points=train_dataset.n_points, loss_fn=loss_fn,
-        n_samples=opt.n_samples, alpha=opt.alpha, beta=opt.beta).to(rank)
+        n_samples=opt.n_samples, alpha=opt.alpha, beta=opt.beta, rotation_representation=opt.rotation).to(rank)
     ddp_model = DDP(model, device_ids=[rank])
 
     if opt.optimizer == "Adam":
@@ -155,9 +160,9 @@ def ddp_func(rank, world_size, opt):
             save_name = os.path.join(checkpoint_dir, "pose_ests", str(epoch+1))
             np.save(save_name,pose_est_np)
 
-            utils.plot_global_pose(checkpoint_dir, "KITTI", epoch+1)
+            utils.plot_global_pose(checkpoint_dir, "KITTI", epoch+1, rotation_representation=opt.rotation)
 
-            trans_ate, rot_ate = utils.compute_ate(pose_est_np, train_dataset.gt_pose)
+            trans_ate, rot_ate = utils.compute_ate(pose_est_np, train_dataset.gt_pose, rotation_representation=opt.rotation)
             trans_ates.append(trans_ate)
             rot_ates.append(rot_ate)
             # utils.plot_curve(trans_ates, "translation_ate", checkpoint_dir)
@@ -204,6 +209,7 @@ parser.add_argument('--resume', action='store_true',
 parser.add_argument('--alpha', type=float, default=0.1, help='weight for chamfer loss')
 parser.add_argument('--beta', type=float, default=0.1, help='weight for euclidean loss')
 parser.add_argument('--optimizer', type=str, default="Adam", help="The optimizer to use")
+parser.add_argument('-r', '--rotation', type=str, default="quaternion", help="The rotation representation to use")
 
 opt = parser.parse_args()
 

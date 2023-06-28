@@ -33,8 +33,13 @@ parser.add_argument('-t','--traj',type=str,default='traj1.txt',help='trajectory 
 parser.add_argument('-v','--voxel_size',type=float,default=1,help='size of downsampling voxel grid')
 parser.add_argument('--group_size',type=int,default=4,help='size of group')
 parser.add_argument('--mode',type=str,default="icp",help='local or global frame registraion')
+parser.add_argument('-r', '--rotation', type=str, default="euler_angle", help="The rotation representation of pose estimation")
 opt = parser.parse_args()
 rc('image', cmap='rainbow_r')
+
+if opt.rotation not in ['quaternion','euler_angle']:
+    print("Unsupported rotation representation")
+    assert()
 
 dataset = opt.data_dir.split("/")[-1]
 if opt.data_dir == "/":
@@ -155,7 +160,7 @@ for i in tqdm(range(len(segments * K))):
 save_name = os.path.join(checkpoint_dir,'pose_est_icp.npy')
 np.save(save_name,pose_est)
 
-utils.plot_global_pose(checkpoint_dir, dataset, mode="prior")
+utils.plot_global_pose(checkpoint_dir, dataset, mode="prior", rotation_representation = opt.rotation)
 # calculate ate
 gt_pose = np.load(os.path.join(dataset_dir, "gt_pose.npy"))
 if dataset == "KITTI": 
@@ -169,6 +174,6 @@ if dataset == "KITTI":
     # gt_pose = gt_pose[:, [1, 0, 2, 5]]
     gt_pose[:, [0, 1]] = gt_pose[:, [1, 0]]
 gt_pose = gt_pose[:pose_est.shape[0]]
-trans_ate, rot_ate = utils.compute_ate(pose_est, gt_pose) 
+trans_ate, rot_ate = utils.compute_ate(pose_est, gt_pose, rotation_representation = opt.rotation) 
 print('{}, translation ate: {}'.format(opt.name,trans_ate))
 print('{}, rotation ate: {}'.format(opt.name,rot_ate))

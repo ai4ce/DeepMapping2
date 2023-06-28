@@ -57,7 +57,6 @@ def plot_global_pose(checkpoint_dir, dataset="kitti", epoch=None, mode=None, rot
     else:
         location = np.load(os.path.join(checkpoint_dir, "pose_ests", str(epoch)+".npy"))
     if rotation_representation == "quaternion":
-        location_quaternion = torch.tensor(location[:, 3:7], dtype=torch.float)  
         q = location[:,3:]
         q = q[:, [1, 2, 3, 0]]
         rpy = Rot.from_quat(q).as_euler("XYZ")

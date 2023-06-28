@@ -177,7 +177,6 @@ for epoch in range(starting_epoch, opt.n_epochs):
     utils.plot_global_pose(checkpoint_dir, opt.dataset, epoch+1, rotation_representation=opt.rotation)
 
     try:
-        print(pose_est_np.shape)
         trans_ate, rot_ate = utils.compute_ate(pose_est_np, train_dataset.gt_pose, rotation_representation=opt.rotation)
     except np.linalg.LinAlgError:
         print("SVD did not converge, using ATE from last epoch.")

@@ -87,11 +87,9 @@ def transform_to_global_KITTI(pose, obs_local, rotation_representation):
     # translation
     assert obs_local.shape[0] == pose.shape[0]
     if rotation_representation == "euler_angle":
-        assert pose.shape[1] == 6
         rpy = pose[:, 3:]
         rotation_matrix = euler_angles_to_matrix(rpy, convention="XYZ")
     elif rotation_representation == "quaternion":
-        assert pose.shape[1] == 7
         quat = pose[:, 3:]
         rotation_matrix = quaternion_to_matrix(quat)
     obs_global = torch.bmm(obs_local, rotation_matrix.transpose(1, 2))
@@ -120,11 +118,9 @@ def compose_pose_diff(pose_est, pairwise, rotation_representation):
     rpy_est = pose_est[1:, 3:]
     rpy_pairwise = pairwise[:, 3:]
     if rotation_representation == "euler_angle":
-        assert pose.shape[-1] != 6
-        rotation_est = euler_angles_to_matrix(rpy_est)
-        rotation_pairwise = euler_angles_to_matrix(rpy_pairwise)
+        rotation_est = euler_angles_to_matrix(rpy_est, convention="XYZ")
+        rotation_pairwise = euler_angles_to_matrix(rpy_pairwise, convention="XYZ")
     elif rotation_representation == "quaternion":
-        assert pose.shape[-1] != 7
         rotation_est = quaternion_to_matrix(rpy_est)
         rotation_pairwise = quaternion_to_matrix(rpy_pairwise)
     r_dst = torch.bmm(rotation_est, rotation_pairwise)
@@ -222,10 +218,8 @@ def compute_ate(output, target, rotation_representation):
     location_aligned = location_aligned.T
     rotation = Rot.from_matrix(R).as_euler("XYZ")
     if rotation_representation == "euler_angle":
-        assert output_location.shape[-1] != 6
         rpy = output[:,3:]
     elif rotation_representation == "quaternion":
-        assert output_location.shape[-1] != 7
         q = output[:,3:]
         output_quat = q[:, [1, 2, 3, 0]]
         rpy = Rot.from_quat(output_quat).as_euler("XYZ")

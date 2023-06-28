@@ -79,7 +79,7 @@ def _axis_angle_rotation(axis: str, angle: torch.Tensor) -> torch.Tensor:
     return torch.stack(R_flat, -1).reshape(angle.shape + (3, 3))
 
 
-def matrix_to_euler_angles(matrix: torch.Tensor, convention="XYZ") -> torch.Tensor:
+def matrix_to_euler_angles(matrix: torch.Tensor, convention: str="XYZ") -> torch.Tensor:
     """
     Convert rotations given as rotation matrices to Euler angles in radians.
 

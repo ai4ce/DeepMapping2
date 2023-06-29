@@ -8,7 +8,7 @@
 </p>
 
 ## News
-**[2023-06]** 🔥 Now the system can converge faster within 7 epochs.
+**[2023-06]** 🔥 Quaternion has been added as the default rotation representation, resulting in faster convergence from 30 epochs to 7 epochs.
 
 **[2023-06]** 🔥 Detailed instruction is available for implementing DeepMapping2 on a custom dataset.
 

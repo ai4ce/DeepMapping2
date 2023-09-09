@@ -119,4 +119,7 @@ We provide a script `pre_processing_custom.py` that performs steps 3, 4, and 5 f
 To generate the three pre-processing files, appropriately change the parameters and execute script
 ```
 run_pre_processing_custom.sh
-``` 
+```
+
+## Download
+You can download the preprocessed data from [Google Drive](https://drive.google.com/drive/folders/1jWfpmCAXaO9122mdkAuSV-yq_2DanPRh?usp=share_link)

@@ -49,11 +49,15 @@ class DeepMapping2(nn.Module):
         self.n_samples = n_samples
         self.loss_fn = loss_fn
         self.n_points = n_points
-        self.loc_net = LocNetRegKITTI(n_points=n_points, out_dims=7) # <x,y,z,theta>
+        self.rotation = rotation_representation
+        if self.rotation == 'quaternion':
+            self.loc_net = LocNetRegKITTI(n_points=n_points, out_dims=7) # <x,y,z,theta>
+        else:
+            self.loc_net = LocNetRegKITTI(n_points=n_points, out_dims=6) # <x,y,z,theta>
         self.occup_net = MLP(dim)
         self.alpha = alpha
         self.beta = beta
-        self.rotation = rotation_representation
+       
 
     def forward(self, obs_local, sensor_pose, valid_points=None, pairwise_pose=None):
         # obs_local: <BxGxNx3> 

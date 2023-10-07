@@ -47,8 +47,7 @@ Following are the steps to generate embeddings using TF-VPR/NetVLAD method using
     ```
 3. Generate min and max thresholds for all point clouds
     ```
-    a. python get_thresholds.py
-    b. python get_mat_files.py
+    python Verification_PCL.py
     ```
 4. Train the model
     a. To train TF-VPR

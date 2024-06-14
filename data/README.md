@@ -1,5 +1,9 @@
-## Introduction
-Follow the steps given below to run DeepMapping2 for your own dataset
+# Download
+You can download the preprocessed data we used in the experiment from [Google Drive](https://drive.google.com/drive/folders/1jWfpmCAXaO9122mdkAuSV-yq_2DanPRh?usp=share_link)
+
+# Custom Dataset
+
+Follow the steps below to implement DeepMapping2 on a custom dataset.
 
 ## Step 1 : Organize your data
 The data should be organized as follows:
@@ -119,6 +123,3 @@ To generate the three pre-processing files, appropriately change the parameters 
 ```
 run_pre_processing_custom.sh
 ```
-
-## Download
-You can download the preprocessed data from [Google Drive](https://drive.google.com/drive/folders/1jWfpmCAXaO9122mdkAuSV-yq_2DanPRh?usp=share_link)

@@ -61,6 +61,12 @@ def plot_global_pose(checkpoint_dir, dataset="kitti", epoch=None, mode=None, rot
         q = q[:, [1, 2, 3, 0]]
         rpy = Rot.from_quat(q).as_euler("XYZ")
         location = np.concatenate((location[:,:3],rpy),axis=1)
+    elif rotation_representation == "6d":
+        rotation_6d = torch.tensor(location[:, 3:])
+        rotation_matrix = rotation_6d_to_matrix(rotation_6d)
+        rpy = Rot.from_matrix(rotation_matrix.numpy()).as_euler("XYZ")
+        location = np.concatenate((location[:, :3], rpy), axis=1)
+
     t = np.arange(location.shape[0]) / location.shape[0]
     # location[:, 0] = location[:, 0] - np.mean(location[:, 0])
     # location[:, 1] = location[:, 1] - np.mean(location[:, 1])

@@ -4,7 +4,7 @@
 import torch
 import torch.nn as nn
 from .networks import LocNetRegKITTI, MLP
-from utils import transform_to_global_KITTI, compose_pose_diff, euler_pose_to_quaternion,quaternion_to_euler_pose, qmul_torch
+from utils import transform_to_global_KITTI, compose_pose_diff, euler_pose_to_quaternion,quaternion_to_euler_pose, qmul_torch, matrix_to_rotation_6d, rotation_6d_to_matrix, euler_pose_to_6d_pose
 
 def get_M_net_inputs_labels(occupied_points, unoccupited_points):
     """
@@ -52,6 +52,8 @@ class DeepMapping2(nn.Module):
         self.rotation = rotation_representation
         if self.rotation == 'quaternion':
             self.loc_net = LocNetRegKITTI(n_points=n_points, out_dims=7) # <x,y,z,theta>
+        elif self.rotation == '6d':
+            self.loc_net = LocNetRegKITTI(n_points=n_points, out_dims=9)
         else:
             self.loc_net = LocNetRegKITTI(n_points=n_points, out_dims=6) # <x,y,z,theta>
         self.occup_net = MLP(dim)
@@ -60,14 +62,22 @@ class DeepMapping2(nn.Module):
        
 
     def forward(self, obs_local, sensor_pose, valid_points=None, pairwise_pose=None):
-        # obs_local: <BxGxNx3> 
+        # obs_local: <GxNx3>
+        # sensor_pose: <Gx4>
         G = obs_local.shape[0]
         self.obs_local = obs_local
         if self.rotation == 'quaternion':
             sensor_pose = euler_pose_to_quaternion(sensor_pose)
-        self.obs_initial = transform_to_global_KITTI(
-            sensor_pose, self.obs_local, rotation_representation=self.rotation)
+            # sensor_pose: <Gx7>
+        elif self.rotation == '6d':
+            sensor_pose = euler_pose_to_6d_pose(sensor_pose)
+            # sensor_pose: <Gx9>
+
+        self.obs_initial = transform_to_global_KITTI(sensor_pose, self.obs_local, rotation_representation=self.rotation)
+        # obs_initial: <GxNx3>
         self.l_net_out = self.loc_net(self.obs_initial)
+        # l_net_out: <Gx9>
+        print(self.l_net_out.shape)
         if self.rotation == 'quaternion':
             original_shape = list(sensor_pose.shape)
             xyz = self.l_net_out[:,:3]+ sensor_pose[:,:3]
@@ -75,17 +85,27 @@ class DeepMapping2(nn.Module):
             self.pose_est =  torch.cat((xyz, wxyz), dim=1).view(original_shape)
         elif self.rotation == 'euler_angle':
             self.pose_est = self.l_net_out + sensor_pose
+        elif self.rotation == '6d':
+            original_shape = list(sensor_pose.shape)
+            xyz = self.l_net_out[:, :3] + sensor_pose[:, :3]
+            l_net_6d = rotation_6d_to_matrix(self.l_net_out[:, 3:])
+            sensor_6d = rotation_6d_to_matrix(sensor_pose[:, 3:])
+            rotation_6d = torch.matmul(l_net_6d, sensor_6d)
+            rotation_6d = matrix_to_rotation_6d(rotation_6d)
+            self.pose_est = torch.cat((xyz, rotation_6d), dim=1).view(original_shape)
         # l_net_out[:, -1] = 0
         # self.pose_est = cat_pose_KITTI(sensor_pose, self.loc_net(self.obs_initial))
         # self.bs = obs_local.shape[0]
         # self.obs_local = self.obs_local.reshape(self.bs,-1,3)
-        self.obs_global_est = transform_to_global_KITTI(
-            self.pose_est, self.obs_local, rotation_representation=self.rotation)
+        self.obs_global_est = transform_to_global_KITTI(self.pose_est, self.obs_local, rotation_representation=self.rotation)
  
         if self.training:
             self.valid_points = valid_points
             if self.rotation == 'quaternion':
                 pairwise_pose = euler_pose_to_quaternion(pairwise_pose)
+            elif self.rotation == '6d':
+                pairwise_pose = euler_pose_to_6d_pose(pairwise_pose)
+
             if self.loss_fn.__name__ == "pose":
                 self.t_src, self.t_dst, self.r_src, self.r_dst = compose_pose_diff(self.pose_est, pairwise_pose, rotation_representation=self.rotation)
             else:

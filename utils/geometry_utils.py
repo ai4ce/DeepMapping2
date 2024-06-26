@@ -77,6 +77,27 @@ def euler_pose_to_quaternion(euler_pose):
     quaternion_pose = torch.cat((xyz, quaternion), dim=1)
     return quaternion_pose
 
+def euler_pose_to_6d_pose(euler_pose):
+    """
+    convert euler angles pose to 6d pose.
+    :param euler_pose: <Bx6> <x, y, z, row, pitch, yaw>
+    :return 6d_pose: <Bx9> <x, y, z, r00, r01, r02, r10, r11, r12>
+    """
+    xyz = euler_pose[:, :3]
+    e = euler_pose[:,3:]
+    assert e.shape[-1] == 3
+
+    # Convert euler angles to rotation matrix
+    rotation_matrix = euler_angles_to_matrix(e, convention="XYZ")
+
+    # Convert rotation matrix to 6D pose representation
+    six_d = matrix_to_rotation_6d(rotation_matrix)
+
+    # Concatenate xyz and six_d along dimension 1
+    six_d_pose = torch.cat((xyz, six_d), dim=1)
+
+    return six_d_pose
+
 def transform_to_global_KITTI(pose, obs_local, rotation_representation):
     """
     transform obs local coordinate to global corrdinate frame
@@ -92,6 +113,9 @@ def transform_to_global_KITTI(pose, obs_local, rotation_representation):
     elif rotation_representation == "quaternion":
         quat = pose[:, 3:]
         rotation_matrix = quaternion_to_matrix(quat)
+    elif rotation_representation == "6d":
+        sixd = pose[:, 3:]
+        rotation_matrix = rotation_6d_to_matrix(sixd)
     obs_global = torch.bmm(obs_local, rotation_matrix.transpose(1, 2))
     # obs_global[:, :, 0] = obs_global[:, :, 0] + pose[:, [0]]
     # obs_global[:, :, 1] = obs_global[:, :, 1] + pose[:, [1]]
@@ -123,6 +147,9 @@ def compose_pose_diff(pose_est, pairwise, rotation_representation):
     elif rotation_representation == "quaternion":
         rotation_est = quaternion_to_matrix(rpy_est)
         rotation_pairwise = quaternion_to_matrix(rpy_pairwise)
+    elif rotation_representation == "6d":
+        rotation_est = rotation_6d_to_matrix(rpy_est)
+        rotation_pairwise = rotation_6d_to_matrix(rpy_pairwise)
     r_dst = torch.bmm(rotation_est, rotation_pairwise)
     # rpy = matrix_to_euler_angles(rotation, convention="XYZ")
     # dst = torch.concat((xyz, rpy), dim=1)
@@ -223,6 +250,11 @@ def compute_ate(output, target, rotation_representation):
         q = output[:,3:]
         output_quat = q[:, [1, 2, 3, 0]]
         rpy = Rot.from_quat(output_quat).as_euler("XYZ")
+    elif rotation_representation == "6d":
+        r = torch.tensor(output[:,3:])
+        output_r = rotation_6d_to_matrix(r)
+        rpy = Rot.from_matrix(output_r.numpy()).as_euler("XYZ")
+
     yaw_aligned = rpy[:, -1] + rotation[-1]
     yaw_gt = target[:, -1]
     while np.any(yaw_aligned > np.pi):
